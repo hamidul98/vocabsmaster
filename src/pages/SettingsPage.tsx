@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { Button, Card, Input, Label, TextField } from '@heroui/react';
 import { PreferenceSwitch } from '@/components/Study';
 import { Mascot } from '@/components/art';
@@ -25,6 +25,7 @@ export default function SettingsPage() {
       <Card className="settings-card"><Card.Header><Icon name="settings" /><h2>Study preferences</h2></Card.Header><Card.Content>
         <div className="setting-row"><div><h3>Dark mode</h3><p>A softer screen for evening study.</p></div><PreferenceSwitch label="Dark mode" selected={theme === 'dark'} onChange={toggleTheme} /></div>
         <div className="setting-row"><div><h3>Hide meanings by default</h3><p>Recall the meaning before you reveal it.</p></div><PreferenceSwitch label="Hide meanings" selected={hide} onChange={(v) => { setHide(v); save('hideMeanings', v); }} /></div>
+        <div className="setting-row"><div><h3>Book cover style</h3><p>Choose from three reusable IELTS cover templates.</p></div><Link className="text-link" to="/cover-templates">Compare styles <Icon name="arrow" size={17}/></Link></div>
       </Card.Content></Card>
 
       <Card className="settings-card"><Card.Header><Icon name="phone" /><h2>Get the App</h2></Card.Header><Card.Content>

@@ -9,6 +9,7 @@ import SearchPage from "./pages/SearchPage";
 import DifficultPage from "./pages/DifficultPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import CoverTemplatesPage from "./pages/CoverTemplatesPage";
 
 /**
  * Hash routes:
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="difficult/:mode?" element={<DifficultPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="cover-templates" element={<CoverTemplatesPage />} />
         <Route path=":slug/:mode?" element={<PassagePage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

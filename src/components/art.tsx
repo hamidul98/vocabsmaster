@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BookCover, bookCoverPalette, type CoverVariant } from './BookCover';
 
 /** Original mascot: an owl in a graduation cap. Swap this component to change the mascot. */
 export function Mascot({ size = 140, mood = 'happy' }: { size?: number; mood?: 'happy' | 'confused' | 'sleepy' }) {
@@ -39,17 +40,11 @@ export function LondonScene() {
   </svg>;
 }
 
-const GRADIENTS = [
-  ['#1A73F5', '#6AA8FF'], ['#8B5CF6', '#B79CFF'], ['#F05252', '#FF9A8B'], ['#22C55E', '#7EE2A3'], ['#F59E0B', '#FFD27A'], ['#0EA5E9', '#7DD3FC'],
-];
-/** Gradient tile showing the book number — gives every passage a thumbnail with no image upload. */
-export function BookThumb({ book, small = '', size = 72 }: { book: number; small?: string; size?: number }) {
-  const [a, b] = GRADIENTS[book % GRADIENTS.length];
-  return <div className="book-thumb" style={{ width: size, height: size, background: `linear-gradient(135deg, ${a}, ${b})` }} aria-hidden="true">
-    <strong style={{ fontSize: size * 0.4 }}>{book}</strong>{small && <span style={{ fontSize: Math.max(9, size * 0.14) }}>{small}</span>}
-  </div>;
+/** Cover thumbnails share the selected template across the app. */
+export function BookThumb({ book, small = '', size = 72, variant }: { book: number; small?: string; size?: number; variant?: CoverVariant }) {
+  return <BookCover book={book} small={small} size={size} variant={variant}/>;
 }
-export const bookColor = (book: number) => GRADIENTS[book % GRADIENTS.length][0];
+export const bookColor = (book: number) => bookCoverPalette(book).main;
 
 export function Ring({ value, size = 150, stroke = 14, children, label }: { value: number; size?: number; stroke?: number; children?: React.ReactNode; label: string }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r, pct = Math.max(0, Math.min(1, value));

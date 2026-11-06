@@ -853,3 +853,113 @@ html { font-family: "Inter Variable", "UN Bangla", "Noto Sans Bengali", system-u
   .bell { order: 3; }
   .bell .dot { top: 8px; right: 9px; }
 }
+
+/* Daily Goal card: brand halftone background (public/daily-goal-bg.webp), softened so the text stays readable */
+.goal-card.rail-goal {
+  background-image: linear-gradient(rgba(255, 255, 255, .38), rgba(255, 255, 255, .38)), url("/daily-goal-bg.webp");
+  background-size: cover; background-position: center; border-color: transparent;
+}
+.dark .goal-card.rail-goal, html.dark .goal-card.rail-goal {
+  background-image: linear-gradient(rgba(11, 18, 32, .55), rgba(11, 18, 32, .55)), url("/daily-goal-bg.webp");
+}
+.goal-card.rail-goal .progress-ring { background: rgba(255, 255, 255, .72); border-radius: 50%; }
+.dark .goal-card.rail-goal .progress-ring { background: rgba(11, 18, 32, .55); }
+.goal-card.rail-goal .week-dots .dot { background: rgba(255, 255, 255, .8); border-color: rgba(26, 115, 245, .35); }
+.dark .goal-card.rail-goal .week-dots .dot { background: rgba(11, 18, 32, .5); }
+.goal-card.rail-goal .week-dots li.met .dot { background: var(--accent); border-color: var(--accent); }
+.goal-card.rail-goal .week-dots small { color: var(--foreground); opacity: .75; }
+
+/* Reusable IELTS cover templates */
+.book-cover { display: block; flex-shrink: 0; border-radius: 4px 8px 8px 4px; box-shadow: 0 4px 10px #19264824, inset 2px 0 0 #ffffff33; font-family: 'Inter Variable', Inter, sans-serif; overflow: hidden; }
+.cover-templates-page { max-width: 1280px; margin: 0 auto; }
+.cover-kicker { color: var(--accent); font-size: 10px; font-weight: 750; letter-spacing: 1.6px; margin-bottom: 12px; }
+.cover-templates-page .page-title { margin-bottom: 30px; }
+.cover-templates-page .page-title h1 { line-height: 1.2; font-size: clamp(28px, 3vw, 40px); }
+.cover-template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.cover-option { min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--border); transition: border-color .2s; }
+.cover-option.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 24px #1a73f50a; }
+.cover-option .cover-option-header { display: flex; flex-direction: row; justify-content: space-between; align-items: center; min-height: 61px; padding: 18px 20px; border-bottom: 1px solid var(--border); gap: 8px; }
+.cover-option-header > span { font-size: 12px; font-weight: 700; }
+.cover-option .cover-option-body { padding: 20px; }
+.cover-stage { height: 220px; display: grid; place-items: center; border-radius: 13px; margin-bottom: 22px; }
+.stage-classic { background: #fff0f2; }
+.stage-editorial { background: #f3f0eb; }
+.stage-midnight { background: #eaf0fa; }
+.dark .stage-classic { background: #38202b; }
+.dark .stage-editorial { background: #302c2b; }
+.dark .stage-midnight { background: #202b47; }
+.cover-stage .book-cover { transform: rotate(-4deg); box-shadow: 5px 13px 18px #17254426; }
+.cover-option h2 { font-size: 20px; letter-spacing: -.5px; margin: 0 0 9px; }
+.cover-option-body > p { font-size: 12px; line-height: 1.8; color: var(--body); min-height: 65px; margin: 0 0 22px; }
+.cover-preview-label { font-size: 8px; letter-spacing: 1.3px; font-weight: 750; color: var(--muted); margin: 20px 0 12px; }
+.cover-option .passage-card { padding: 15px; border-radius: 17px; background: var(--surface); }
+.cover-option .pc-main { gap: 12px; }
+.cover-option .pc-info h3 { font-size: 14px; }
+.cover-option .pc-info p, .cover-option .pc-progress span { font-size: 10px; }
+.cover-option .pc-meta .chip { font-size: 9px; }
+.cover-option .pc-actions { flex-wrap: wrap; gap: 8px; }
+.cover-option .pc-actions > .button { height: 34px; font-size: 12px; padding: 0 13px; }
+.cover-option .pc-modes { gap: 3px; }
+.cover-option .pc-modes .button { width: 28px; height: 28px; min-width: 28px; }
+.cover-book-family { display: flex; gap: 14px; align-items: center; padding: 5px 2px; }
+.cover-option > .card__footer { padding: 0 20px 22px; margin-top: auto; }
+.cover-template-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; margin-top: 27px; }
+.cover-template-footer p { font-size: 12px; color: var(--muted); line-height: 1.8; }
+.cover-template-footer a { display: inline-flex; gap: 8px; align-items: center; color: var(--accent); font-size: 12px; font-weight: 650; }
+@media(max-width:1199px) { .cover-template-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:767px) { .cover-template-grid { grid-template-columns: minmax(0,1fr); gap: 24px; } .cover-option-body > p { min-height: auto; } .cover-templates-page .page-title h1 { font-size: 29px; } }
+
+/* Daily Goal: the image is almost white at its top-right, which made the card edge vanish.
+   Show the more saturated left/bottom part of the image and give the card a visible edge. */
+.goal-card.rail-goal {
+  background-size: 175% auto; background-position: 0% 70%;
+  border: 1px solid rgba(26, 115, 245, .28);
+  box-shadow: 0 6px 20px rgba(30, 80, 160, .14);
+}
+html.dark .goal-card.rail-goal { border-color: rgba(125, 176, 255, .3); }
+
+/* Daily Goal readability: stronger wash + frosted panels behind every text block */
+.goal-card.rail-goal {
+  background-image: linear-gradient(rgba(255, 255, 255, .52), rgba(255, 255, 255, .52)), url("/daily-goal-bg.webp");
+}
+html.dark .goal-card.rail-goal {
+  background-image: linear-gradient(rgba(11, 18, 32, .68), rgba(11, 18, 32, .68)), url("/daily-goal-bg.webp");
+}
+.goal-card.rail-goal .rail-head h2 { color: var(--foreground); }
+.goal-card.rail-goal .rail-head .button { background: rgba(255, 255, 255, .8); border-radius: 999px; color: var(--foreground); font-weight: 650; }
+.goal-card.rail-goal .goal-text,
+.goal-card.rail-goal .week-dots {
+  background: rgba(255, 255, 255, .84); border-radius: 16px; padding: 10px 12px;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.goal-card.rail-goal .goal-text p { color: #2b3a5c; font-size: 13px; }
+.goal-card.rail-goal .goal-text strong { color: var(--foreground); }
+.goal-card.rail-goal .week-dots { margin-top: 14px; padding: 10px 12px 8px; }
+.goal-card.rail-goal .week-dots small { opacity: 1; color: #2b3a5c; font-weight: 600; }
+.goal-card.rail-goal .progress-ring { background: rgba(255, 255, 255, .88); }
+.goal-card.rail-goal .ring-center small { color: #44557a; }
+html.dark .goal-card.rail-goal .rail-head .button { background: rgba(11, 18, 32, .7); color: var(--foreground); }
+html.dark .goal-card.rail-goal .goal-text, html.dark .goal-card.rail-goal .week-dots { background: rgba(11, 18, 32, .72); }
+html.dark .goal-card.rail-goal .goal-text p, html.dark .goal-card.rail-goal .week-dots small, html.dark .goal-card.rail-goal .ring-center small { color: #c4d1ea; }
+html.dark .goal-card.rail-goal .progress-ring { background: rgba(11, 18, 32, .7); }
+.goal-card.rail-goal .goal-body { gap: 12px; }
+.goal-card.rail-goal .goal-text { flex: 1; min-width: 0; }
+.goal-card.rail-goal .ring-center strong { font-size: 17px; }
+
+/* phone hero: pill on top, text left + illustration right (mascot and scene fully visible) */
+@media (max-width: 767px) {
+  .hero-card {
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); grid-template-areas: "book book" "copy art";
+    align-items: stretch; min-height: 0; padding: 16px 0 0 18px; gap: 0 4px;
+  }
+  .hero-card .hero-book { grid-area: book; position: static; order: 0; margin: 0 0 12px; width: fit-content; }
+  .hero-copy { grid-area: copy; padding: 0 0 20px; align-self: center; }
+  .hero-copy h1 { font-size: 26px; line-height: 1.15; margin-bottom: 8px; }
+  .hero-copy h1 .material-symbols-outlined { font-size: 28px !important; vertical-align: -4px; }
+  .hero-copy p { font-size: 13.5px; margin-bottom: 14px; max-width: none; }
+  .hero-copy .cta { height: 44px; padding: 0 18px; font-size: 14px; }
+  .hero-art { grid-area: art; position: relative; width: auto; min-height: 170px; margin: 0; overflow: hidden; border-radius: 0 0 24px 0; }
+  .london-scene { position: absolute; right: 0; bottom: 0; width: 100%; height: 100%; }
+  .hero-mascot { right: 14%; bottom: 0; }
+  .hero-mascot svg { width: 104px; height: 104px; }
+}

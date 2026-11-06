@@ -30,7 +30,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff,woff2,ttf,otf}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,woff,woff2,ttf,otf,webp}"],
         runtimeCaching: [
           {
             // Google Sheet data: show fresh when online, saved copy when offline

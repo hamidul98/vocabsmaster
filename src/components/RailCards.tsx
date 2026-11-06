@@ -14,7 +14,7 @@ export function DailyGoalCard() {
   return <Card className="goal-card rail-goal">
     <div className="rail-head"><h2>Your Daily Goal</h2><Button size="sm" variant="ghost" onPress={edit.open}>Edit <Icon name="chevron" size={16}/></Button></div>
     <div className="goal-body">
-      <Ring value={goal ? todayCount / goal : 0} size={132} stroke={12} label={`${todayCount} of ${goal} words today`}>
+      <Ring value={goal ? todayCount / goal : 0} size={112} stroke={11} label={`${todayCount} of ${goal} words today`}>
         <Icon name="flame" size={26} filled/><strong>{todayCount} / {goal}</strong><small>words · Today</small>
       </Ring>
       <div className="goal-text">

@@ -2,6 +2,7 @@ import { Button, Card, Chip } from '@heroui/react';
 import { useNavigate } from 'react-router-dom';
 import { shortBook, type PassageStat } from '@/hooks/useStats';
 import { BookThumb } from './art';
+import type { CoverVariant } from './BookCover';
 import { Icon, Meter } from './ui';
 
 export const passageTitle = (s: PassageStat) => `Passage ${s.ref.passageNumber} — ${s.ref.bookNumber} T${s.ref.testNumber}`;
@@ -14,12 +15,12 @@ const STATUS = {
 } as const;
 
 /** `wide` = the "Continue Learning" layout; default = grid card used in Library. */
-export default function PassageCard({ stat, wide = false }: { stat: PassageStat; wide?: boolean }) {
+export default function PassageCard({ stat, wide = false, coverVariant }: { stat: PassageStat; wide?: boolean; coverVariant?: CoverVariant }) {
   const navigate = useNavigate();
   const go = (mode: string) => navigate(`/${stat.ref.slug}/${mode}`);
   const st = STATUS[stat.status];
   const cta = stat.status === 'progress' ? 'Resume' : 'Start';
-  const thumb = <BookThumb book={stat.ref.bookNumber} small={`T${stat.ref.testNumber} · P${stat.ref.passageNumber}`} size={wide ? 88 : 64}/>;
+  const thumb = <BookThumb book={stat.ref.bookNumber} small={`T${stat.ref.testNumber} · P${stat.ref.passageNumber}`} size={wide ? 88 : 64} variant={coverVariant}/>;
   return <Card className={`passage-card ${wide ? 'wide' : ''}`}>
     <div className="pc-main">
       {thumb}
