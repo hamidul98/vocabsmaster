@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Drawer, Dropdown, Label, ListBox, Select, useOverlayState } from '@heroui/react';
+import { Button, Drawer, Dropdown, useOverlayState } from '@heroui/react';
 import type { PassageRef } from '@/lib/types';
 import { activeCount, EMPTY_FILTERS, optionsFor, type Filters, type SortF, type StatusF, type WordsF } from '@/lib/filters';
 import { shortBook } from '@/hooks/useStats';
@@ -36,12 +36,8 @@ function Controls({ index, value, onChange, fields = ALL, placeholder }: Props) 
   return <div className="filter-controls">
     {has('q') && <SearchInput value={value.q} onChange={(q) => change({ ...value, q })} placeholder={placeholder ?? 'Search passages or words…'}/>}
     <div className="filter-selects">
-      {has('book') && <Select className="filter-select" aria-label="Book" selectionMode="multiple" placeholder="All books"
-        value={value.books} onChange={(v) => change({ ...value, books: (v as unknown as (string | number)[]).map(String) })}>
-        <Label>Book</Label>
-        <Select.Trigger><Select.Value/><Select.Indicator/></Select.Trigger>
-        <Select.Popover><ListBox selectionMode="multiple">{books.map(([id, name]) => <ListBox.Item key={id} id={id} textValue={name}>{name}<ListBox.ItemIndicator/></ListBox.Item>)}</ListBox></Select.Popover>
-      </Select>}
+      {has('book') && <FilterSelect label="Book" value={value.books[0] ?? 'all'} onChange={(v) => change({ ...value, books: v === 'all' ? [] : [v] })}
+        options={[{ id: 'all', label: 'All books' }, ...books.map(([id, name]) => ({ id, label: name }))]}/>}
       {has('test') && <FilterSelect label="Test" value={value.test || 'all'} onChange={(v) => change({ ...value, test: v === 'all' ? '' : v })}
         options={[{ id: 'all', label: 'All tests' }, ...tests.map((t) => ({ id: String(t), label: `Test ${t}` }))]}/>}
       {has('passage') && <FilterSelect label="Passage" value={value.passage || 'all'} onChange={(v) => change({ ...value, passage: v === 'all' ? '' : v })}
