@@ -1,0 +1,174 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { toast } from "@heroui/react";
+import { load, save } from "./storage";
+import type { Word } from "./types";
+
+export type Status = "learned" | "difficult";
+type Marks = Record<string, Status>; // key = Word.id
+
+export const XP_PER_LEVEL = 250;
+export const XP = { flashcard: 2, quiz: 5, learned: 10, passage: 50 } as const;
+
+/** Local-time YYYY-MM-DD (toISOString would use UTC and break streaks near midnight). */
+export const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+/** Persisted state with a ref mirror so callbacks always see the latest value. */
+function usePersisted<T>(key: string, initial: T) {
+  const [value, setValue] = useState<T>(() => load(key, initial));
+  const ref = useRef(value);
+  const set = useCallback((next: T | ((p: T) => T)) => {
+    const v = typeof next === "function" ? (next as (p: T) => T)(ref.current) : next;
+    ref.current = v;
+    save(key, v);
+    setValue(v);
+  }, [key]);
+  return [value, set, ref] as const;
+}
+
+export interface WeekDay { label: string; key: string; met: boolean; today: boolean; future: boolean }
+
+interface ProgressCtx {
+  marks: Marks;
+  /** Toggle: setting the same status again clears it. */
+  toggle: (wordId: string, status: Status) => void;
+  statusOf: (wordId: string) => Status | undefined;
+  learnedAt: Record<string, number>;
+  /** Consecutive days the daily goal was met. */
+  streak: number;
+  xp: number;
+  level: number;
+  xpIntoLevel: number;
+  goal: number;
+  setGoal: (n: number) => void;
+  daily: Record<string, number>;
+  todayCount: number;
+  week: WeekDay[];
+  name: string;
+  setName: (s: string) => void;
+  /** Default book filter (bookNumber as string) or "" for all */
+  book: string;
+  setBook: (s: string) => void;
+  lastStudied: { path: string; slug: string } | null;
+  setLastStudied: (path: string, slug: string) => void;
+  wrong: Record<string, number>;
+  reviewCard: () => void;
+  answerQuiz: (word: Word, correct: boolean) => void;
+  completePassage: (slug: string) => void;
+  reset: () => void;
+}
+
+const Ctx = createContext<ProgressCtx | null>(null);
+
+export function ProgressProvider({ children }: { children: ReactNode }) {
+  const [marks, setMarks, marksRef] = usePersisted<Marks>("marks", {});
+  const [learnedAt, setLearnedAt] = usePersisted<Record<string, number>>("learnedAt", {});
+  const [daily, setDaily, dailyRef] = usePersisted<Record<string, number>>("daily", {});
+  const [xp, setXp, xpRef] = usePersisted<number>("xp", 0);
+  const [goal, setGoal, goalRef] = usePersisted<number>("goal", 20);
+  const [name, setName] = usePersisted<string>("name", "Learner");
+  const [book, setBook] = usePersisted<string>("book", "");
+  const [wrong, setWrong] = usePersisted<Record<string, number>>("wrong", {});
+  const [, setBonus] = usePersisted<string[]>("bonus", []);
+  const [lastStudied, setLast] = usePersisted<{ path: string; slug: string } | null>("last", null);
+
+  const addXp = useCallback((n: number) => {
+    const before = Math.floor(xpRef.current / XP_PER_LEVEL);
+    const next = xpRef.current + n;
+    setXp(next);
+    const after = Math.floor(next / XP_PER_LEVEL);
+    if (after > before) {
+      toast.success(`Level up! You reached Level ${after + 1}`);
+      window.dispatchEvent(new CustomEvent("ibv:confetti"));
+    }
+  }, [setXp, xpRef]);
+
+  const countReview = useCallback((n = 1) => {
+    const k = dayKey();
+    const prev = dailyRef.current[k] ?? 0;
+    setDaily({ ...dailyRef.current, [k]: prev + n });
+    if (prev < goalRef.current && prev + n >= goalRef.current) {
+      toast.success("Daily goal reached!");
+      window.dispatchEvent(new CustomEvent("ibv:confetti"));
+    }
+  }, [dailyRef, goalRef, setDaily]);
+
+  const toggle = useCallback((id: string, status: Status) => {
+    const next = { ...marksRef.current };
+    const clearing = next[id] === status;
+    if (clearing) delete next[id];
+    else next[id] = status;
+    setMarks(next);
+    setLearnedAt((m) => {
+      const c = { ...m };
+      if (!clearing && status === "learned") c[id] = Date.now();
+      else if (status === "learned" || next[id] !== "learned") delete c[id];
+      return c;
+    });
+    if (!clearing && status === "learned") {
+      addXp(XP.learned);
+      countReview();
+    }
+  }, [addXp, countReview, marksRef, setLearnedAt, setMarks]);
+
+  const reviewCard = useCallback(() => { addXp(XP.flashcard); countReview(); }, [addXp, countReview]);
+
+  const answerQuiz = useCallback((word: Word, correct: boolean) => {
+    countReview();
+    if (correct) addXp(XP.quiz);
+    else setWrong((w) => ({ ...w, [word.id]: (w[word.id] ?? 0) + 1 }));
+  }, [addXp, countReview, setWrong]);
+
+  const completePassage = useCallback((slug: string) => {
+    setBonus((b) => {
+      if (b.includes(slug)) return b;
+      addXp(XP.passage);
+      toast.success("Passage completed! +50 XP");
+      return [...b, slug];
+    });
+  }, [addXp, setBonus]);
+
+  const setLastStudied = useCallback((path: string, slug: string) => setLast({ path, slug }), [setLast]);
+
+  const reset = useCallback(() => {
+    setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null);
+  }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast]);
+
+  // streak = consecutive days with daily >= goal, ending today (or yesterday if today isn't done yet)
+  const streak = useMemo(() => {
+    let d = new Date();
+    if ((daily[dayKey(d)] ?? 0) < goal) d = addDays(d, -1);
+    let n = 0;
+    while ((daily[dayKey(d)] ?? 0) >= goal && goal > 0) { n++; d = addDays(d, -1); }
+    return n;
+  }, [daily, goal]);
+
+  const week = useMemo<WeekDay[]>(() => {
+    const now = new Date();
+    const monday = addDays(now, -((now.getDay() + 6) % 7));
+    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, i) => {
+      const d = addDays(monday, i);
+      const key = dayKey(d);
+      return { label, key, met: (daily[key] ?? 0) >= goal, today: key === dayKey(now), future: d > now && key !== dayKey(now) };
+    });
+  }, [daily, goal]);
+
+  // keep value fresh across midnight
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
+
+  const value = useMemo<ProgressCtx>(() => ({
+    marks, toggle, statusOf: (id) => marks[id], learnedAt, streak, xp,
+    level: Math.floor(xp / XP_PER_LEVEL) + 1, xpIntoLevel: xp % XP_PER_LEVEL,
+    goal, setGoal, daily, todayCount: daily[dayKey()] ?? 0, week, name, setName, book, setBook,
+    lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset,
+  }), [marks, toggle, learnedAt, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export const useProgress = () => {
+  const c = useContext(Ctx);
+  if (!c) throw new Error("useProgress outside ProgressProvider");
+  return c;
+};
