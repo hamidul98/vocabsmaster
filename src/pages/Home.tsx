@@ -5,8 +5,9 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { usePassageStats, shortBook } from '@/hooks/useStats';
 import { useProgress } from '@/lib/progress';
 import { Failure, FilterSelect, HomeSkeleton, Icon } from '@/components/ui';
-import { BookThumb, LondonScene, Mascot } from '@/components/art';
+import { BookThumb, Mascot } from '@/components/art';
 import PassageCard from '@/components/PassageCard';
+import Butterflies from '@/components/Butterflies';
 import SheetNotices from '@/components/SheetNotices';
 import { DailyGoalCard, MilestoneCard, TopBooksCard } from '@/components/RailCards';
 
@@ -20,7 +21,7 @@ const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good 
 
 export default function Home() {
   const { index, indexError, loadAll, reload } = useLibrary();
-  const { name, book, setBook, lastStudied } = useProgress();
+  const { name, book, setBook, lastStudied, todayCount, goal } = useProgress();
   const stats = usePassageStats();
   const navigate = useNavigate();
   const row = useRef<HTMLDivElement>(null);
@@ -46,15 +47,18 @@ export default function Home() {
   return <div className="home-grid">
     <div className="home-col">
       <section className="hero-card">
+        <div className="hero-bg" aria-hidden="true"/>
+        <Butterflies/>
         <div className="hero-copy">
+          <div className="hero-book"><Icon name="book" size={20} filled/>
+            <FilterSelect label="Book" value={book || 'all'} onChange={(v) => setBook(v === 'all' ? '' : v)}
+              options={[{ id: 'all', label: 'All books' }, ...books.map(([id, n]) => ({ id, label: shortBook(n) }))]}/></div>
           <h1>{greeting()}<br/><span>{name}!</span> <span className="wave"><Icon name="wave" size={40} filled/></span></h1>
           <p>{subtitle}</p>
-          <Button className="pill cta" onPress={() => navigate(lastStudied?.path ?? (cur ? `/${cur.ref.slug}/list` : '/library'))}>Continue Learning <Icon name="arrow" size={20}/></Button>
+          <Button className="pill cta" onPress={() => navigate(lastStudied?.path ?? (cur ? `/${cur.ref.slug}/list` : '/library'))}><span className="lbl-long">Continue Learning</span><span className="lbl-short">Continue</span> <Icon name="arrow" size={20}/></Button>
+          <div className="hero-today" aria-label={`${todayCount} of ${goal} words reviewed today`}><Icon name="flame" size={18} filled/><span><b>{todayCount}/{goal}</b> words today</span></div>
         </div>
-        <div className="hero-art"><LondonScene/><div className="hero-mascot"><Mascot size={170}/></div></div>
-        <div className="hero-book"><Icon name="book" size={20} filled/>
-          <FilterSelect label="Book" value={book || 'all'} onChange={(v) => setBook(v === 'all' ? '' : v)}
-            options={[{ id: 'all', label: 'All books' }, ...books.map(([id, n]) => ({ id, label: shortBook(n) }))]}/></div>
+        <img className="hero-photo" src="hero-banner.webp" alt="" width="797" height="760" decoding="async"/>
       </section>
 
       <SheetNotices/>
