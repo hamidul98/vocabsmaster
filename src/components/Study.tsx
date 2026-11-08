@@ -9,7 +9,9 @@ import { shuffle } from '@/lib/util';
 import { load, save } from '@/lib/storage';
 import { speak } from '@/lib/speech';
 import { useProgress, XP } from '@/lib/progress';
-import WordCard, { WordDetails } from './WordCard';
+import WordCard, { WordDetails, WordRow } from './WordCard';
+import { MARK_COLORS, type MarkColor } from '@/lib/colors';
+import type { CSSProperties } from 'react';
 import { Empty, Icon, Meter, SearchInput } from './ui';
 import { Mascot, Ring } from './art';
 
@@ -22,11 +24,37 @@ export function Study({ words, mode, base }: { words:Word[]; mode:string; base:s
   const [query,setQuery]=useState('');
   const [hide,setHide]=useState(()=>load('hideMeanings',false));
   const [page,setPage]=useState(1);
+  const [view,setView]=useState<'cards'|'list'>(()=>load('wordView','cards'));
+  const [colorFilter,setColorFilter]=useState<MarkColor|'any'|null>(null);
+  const { colors } = useProgress();
   const active=['list','flashcards','quiz'].includes(mode)?mode:'list';
-  const filtered=words.filter(w=>[w.word,...w.fields.map(f=>f.value)].join(' ').toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+  const filtered=words.filter(w=>[w.word,...w.fields.map(f=>f.value)].join(' ').toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+    .filter(w=>colorFilter===null||(colorFilter==='any'?!!colors[w.id]:colors[w.id]===colorFilter));
+  const colorCount=(c:MarkColor)=>words.filter(w=>colors[w.id]===c).length;
+  const markedCount=words.filter(w=>colors[w.id]).length;
+  const shown=filtered.slice(0,page*24);
   return <Tabs selectedKey={active} onSelectionChange={key=>navigate(`${base}/${key}${search}`)} className="study-tabs">
     <div className="study-toolbar"><Tabs.ListContainer><Tabs.List aria-label="Study mode">{['list','flashcards','quiz'].map(m=><Tabs.Tab key={m} id={m}>{m==='list'?'List':m==='flashcards'?'Flashcards':'Quiz'}<Tabs.Indicator/></Tabs.Tab>)}</Tabs.List></Tabs.ListContainer><span className="muted">{words.length} words</span></div>
-    <Tabs.Panel id="list"><div className="list-toolbar"><SearchInput value={query} onChange={v=>{setQuery(v);setPage(1);}} placeholder="Search this collection…"/><PreferenceSwitch label="Hide meanings" selected={hide} onChange={v=>{setHide(v);save('hideMeanings',v);}}/></div>{filtered.length?<><div className="word-grid">{filtered.slice(0,page*24).map(w=><WordCard key={w.id} word={w} hideMeanings={hide}/>)}</div>{filtered.length>page*24&&<div className="load-more"><Button variant="secondary" onPress={()=>setPage(p=>p+1)}>Show more words ({filtered.length-page*24} left)</Button></div>}</>:<Empty title="No words found">Try a different spelling or search term.</Empty>}</Tabs.Panel>
+    <Tabs.Panel id="list">
+      <div className="list-toolbar"><SearchInput value={query} onChange={v=>{setQuery(v);setPage(1);}} placeholder="Search this collection…"/>
+        <div className="list-prefs">
+          <div className="view-toggle" role="group" aria-label="Word layout">{(['cards','list'] as const).map(v=><button key={v} type="button" aria-pressed={view===v} className={view===v?'active':''} onClick={()=>{setView(v);save('wordView',v);}}><Icon name={v==='cards'?'grid':'table'} size={18}/>{v==='cards'?'Cards':'List'}</button>)}</div>
+          <PreferenceSwitch label="Hide meanings" selected={hide} onChange={v=>{setHide(v);save('hideMeanings',v);}}/>
+        </div>
+      </div>
+      <div className="color-filter" role="group" aria-label="Filter by focus colour">
+        <span className="muted">Focus:</span>
+        <button type="button" className={`cf-chip ${colorFilter===null?'active':''}`} aria-pressed={colorFilter===null} onClick={()=>{setColorFilter(null);setPage(1);}}>All</button>
+        <button type="button" className={`cf-chip ${colorFilter==='any'?'active':''}`} aria-pressed={colorFilter==='any'} onClick={()=>{setColorFilter('any');setPage(1);}}>Any colour <span className="cf-count">{markedCount}</span></button>
+        {MARK_COLORS.map(c=><button key={c.key} type="button" className={`cf-chip ${colorFilter===c.key?'active':''}`} style={{'--mark':c.hex} as CSSProperties} aria-pressed={colorFilter===c.key} aria-label={`${c.label} (${colorCount(c.key)})`} onClick={()=>{setColorFilter(colorFilter===c.key?null:c.key);setPage(1);}}><span className="color-dot"/><span className="cf-count">{colorCount(c.key)}</span></button>)}
+      </div>
+      {filtered.length?<>
+        {view==='cards'
+          ?<div className="word-grid">{shown.map(w=><WordCard key={w.id} word={w} hideMeanings={hide}/>)}</div>
+          :<ul className="word-list">{shown.map((w,i)=><WordRow key={w.id} word={w} hideMeanings={hide} index={i}/>)}</ul>}
+        {filtered.length>page*24&&<div className="load-more"><Button variant="secondary" onPress={()=>setPage(p=>p+1)}>Show more words ({filtered.length-page*24} left)</Button></div>}
+      </>:<Empty title="No words found">{colorFilter!==null?'No words have this focus colour yet. Tap the palette icon on a word to add one.':'Try a different spelling or search term.'}</Empty>}
+    </Tabs.Panel>
     <Tabs.Panel id="flashcards"><Flashcards words={words}/></Tabs.Panel>
     <Tabs.Panel id="quiz"><Quiz words={words} onBack={()=>navigate(`${base}/list${search}`)}/></Tabs.Panel>
   </Tabs>;

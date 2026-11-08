@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Button, Card, Chip } from '@heroui/react';
+import { Button as AriaButton, Dialog, DialogTrigger, Popover } from 'react-aria-components';
 import type { Word } from '@/lib/types';
 import { useProgress } from '@/lib/progress';
+import { MARK_COLORS, colorHex, colorLabel } from '@/lib/colors';
 import { speak } from '@/lib/speech';
 import { Icon } from './ui';
 
@@ -20,12 +22,64 @@ export function WordActions({ word }: { word: Word }) {
     <Button isIconOnly size="sm" variant={status==='difficult'?'primary':'secondary'} aria-label={status==='difficult'?'Difficult (tap to undo)':'Mark as difficult'} aria-pressed={status==='difficult'} className="mark difficult" onPress={()=>toggle(word.id,'difficult')}><Icon name="star" size={20} filled={status==='difficult'}/></Button>
   </div>;
 }
+
+/** Palette button that opens a swatch popover for the word's focus colour. */
+export function ColorPicker({ word }: { word: Word }) {
+  const { colors, setColor } = useProgress();
+  const current = colors[word.id];
+  const hex = colorHex(current);
+  return <DialogTrigger>
+    <AriaButton className={`color-trigger ${current ? 'is-set' : ''}`} style={hex ? { '--mark': hex } as CSSProperties : undefined}
+      aria-label={current ? `Focus colour: ${colorLabel(current)} (change)` : 'Add a focus colour'}>
+      {current ? <span className="color-dot" /> : <Icon name="palette" size={20} />}
+    </AriaButton>
+    <Popover placement="bottom end" offset={6} className="color-popover">
+      <Dialog aria-label={`Focus colour for ${word.word}`} className="color-dialog">
+        {({ close }) => <>
+          <div className="swatches">{MARK_COLORS.map(c => <button key={c.key} type="button" className={`swatch ${current === c.key ? 'selected' : ''}`}
+            style={{ '--mark': c.hex } as CSSProperties} aria-label={c.label} aria-pressed={current === c.key}
+            onClick={() => { setColor(word.id, current === c.key ? null : c.key); close(); }}>{current === c.key && <Icon name="check" size={16} />}</button>)}</div>
+          {current && <button type="button" className="swatch-clear" onClick={() => { setColor(word.id, null); close(); }}><Icon name="close" size={16} />Remove colour</button>}
+        </>}
+      </Dialog>
+    </Popover>
+  </DialogTrigger>;
+}
+
+const markStyle = (hex?: string) => hex ? { '--mark': hex } as CSSProperties : undefined;
+
 export default function WordCard({ word, hideMeanings=false, source }: { word: Word; hideMeanings?: boolean; source?: React.ReactNode }) {
   const [revealed,setRevealed]=useState(false);
-  return <Card className="word-card"><Card.Header>
+  const { colors } = useProgress();
+  const hex = colorHex(colors[word.id]);
+  return <Card className={`word-card ${hex ? 'has-mark' : ''}`} style={markStyle(hex)}><Card.Header>
     <div><h3>{word.word}</h3><div className="chips">{word.fields.filter(f=>f.kind==='pos' && f.value).map((f,i)=><Chip key={i} size="sm" variant="soft">{f.value}</Chip>)}</div></div>
-    <div className="card-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={()=>speak(word.word)}><Icon name="sound"/></Button><WordActions word={word}/></div>
+    <div className="card-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={()=>speak(word.word)}><Icon name="sound"/></Button><WordActions word={word}/><ColorPicker word={word}/></div>
   </Card.Header>
   <Card.Content>{hideMeanings&&!revealed?<Button variant="secondary" fullWidth className="reveal-button" onPress={()=>setRevealed(true)}>Tap to reveal meaning</Button>:<WordDetails word={word}/>}</Card.Content>
   {source && <Card.Footer><div className="word-source">{source}</div></Card.Footer>}</Card>;
+}
+
+/** Compact one-line list row; click the row to expand full details. */
+export function WordRow({ word, hideMeanings=false, index }: { word: Word; hideMeanings?: boolean; index?: number }) {
+  const [open,setOpen]=useState(false);
+  const [revealed,setRevealed]=useState(false);
+  const { colors } = useProgress();
+  const hex = colorHex(colors[word.id]);
+  const pos = word.fields.find(f=>f.kind==='pos' && f.value)?.value;
+  const bangla = word.fields.find(f=>f.kind==='bangla' && f.value)?.value ?? word.fields.find(f=>f.kind==='meaning' && f.value)?.value;
+  const hidden = hideMeanings && !revealed;
+  return <li className={`word-row ${hex ? 'has-mark' : ''} ${open ? 'open' : ''}`} style={markStyle(hex)}>
+    <div className="row-main">
+      <button type="button" className="row-toggle" aria-expanded={open} onClick={()=>{setOpen(o=>!o); setRevealed(true);}}>
+        {index!==undefined && <span className="row-num">{index+1}</span>}
+        <span className="row-word">{word.word}</span>
+        {pos && <span className="row-pos">{pos}</span>}
+        <span className={`row-meaning font-bangla ${hidden ? 'is-hidden' : ''}`}>{hidden ? 'Tap to reveal' : bangla}</span>
+        <Icon name="down" size={20} />
+      </button>
+      <div className="row-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={()=>speak(word.word)}><Icon name="sound" size={18}/></Button><WordActions word={word}/><ColorPicker word={word}/></div>
+    </div>
+    {open && <div className="row-details"><WordDetails word={word}/></div>}
+  </li>;
 }

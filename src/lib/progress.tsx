@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toast } from "@heroui/react";
 import { load, save } from "./storage";
 import type { Word } from "./types";
+import type { MarkColor } from "./colors";
 
 export type Status = "learned" | "difficult";
 type Marks = Record<string, Status>; // key = Word.id
@@ -34,6 +35,10 @@ interface ProgressCtx {
   /** Toggle: setting the same status again clears it. */
   toggle: (wordId: string, status: Status) => void;
   statusOf: (wordId: string) => Status | undefined;
+  /** Focus colour per word (independent of learned/difficult). */
+  colors: Record<string, MarkColor>;
+  /** Set a word's focus colour; null clears it. */
+  setColor: (wordId: string, color: MarkColor | null) => void;
   learnedAt: Record<string, number>;
   /** Consecutive days the daily goal was met. */
   streak: number;
@@ -71,6 +76,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [book, setBook] = usePersisted<string>("book", "");
   const [wrong, setWrong] = usePersisted<Record<string, number>>("wrong", {});
   const [, setBonus] = usePersisted<string[]>("bonus", []);
+  const [colors, setColors, colorsRef] = usePersisted<Record<string, MarkColor>>("colors", {});
   const [lastStudied, setLast] = usePersisted<{ path: string; slug: string } | null>("last", null);
 
   const addXp = useCallback((n: number) => {
@@ -112,6 +118,13 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     }
   }, [addXp, countReview, marksRef, setLearnedAt, setMarks]);
 
+  const setColor = useCallback((id: string, color: MarkColor | null) => {
+    const next = { ...colorsRef.current };
+    if (color) next[id] = color;
+    else delete next[id];
+    setColors(next);
+  }, [colorsRef, setColors]);
+
   const reviewCard = useCallback(() => { addXp(XP.flashcard); countReview(); }, [addXp, countReview]);
 
   const answerQuiz = useCallback((word: Word, correct: boolean) => {
@@ -132,8 +145,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const setLastStudied = useCallback((path: string, slug: string) => setLast({ path, slug }), [setLast]);
 
   const reset = useCallback(() => {
-    setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null);
-  }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast]);
+    setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null); setColors({});
+  }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast, setColors]);
 
   // streak = consecutive days with daily >= goal, ending today (or yesterday if today isn't done yet)
   const streak = useMemo(() => {
@@ -159,11 +172,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
 
   const value = useMemo<ProgressCtx>(() => ({
-    marks, toggle, statusOf: (id) => marks[id], learnedAt, streak, xp,
+    marks, toggle, statusOf: (id) => marks[id], colors, setColor, learnedAt, streak, xp,
     level: Math.floor(xp / XP_PER_LEVEL) + 1, xpIntoLevel: xp % XP_PER_LEVEL,
     goal, setGoal, daily, todayCount: daily[dayKey()] ?? 0, week, name, setName, book, setBook,
     lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset,
-  }), [marks, toggle, learnedAt, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
+  }), [marks, toggle, colors, setColor, learnedAt, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
