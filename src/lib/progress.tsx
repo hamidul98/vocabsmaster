@@ -7,6 +7,10 @@ import type { MarkColor } from "./colors";
 export type Status = "learned" | "difficult";
 /** How far a word has been explored: 2 = interacted with (level 1 is legacy and ignored). */
 export type SeenLevel = 1 | 2;
+export type Skill = "pre-ielts" | "reading" | "writing" | "speaking" | "listening";
+/** An admin-added study resource (kept in the admin's own synced data, so no one else can see it). */
+export interface Resource { id: string; title: string; url: string; note: string; addedAt: number }
+
 /** Share of a word counted as "covered": learned 100%, engaged/difficult 60%. */
 export const WEIGHT = { learned: 1, engaged: 0.6 } as const;
 type Marks = Record<string, Status>; // key = Word.id
@@ -49,6 +53,8 @@ export interface SyncData {
   order: Record<string, string[]>;
   /** Word id -> how far it was explored (see SeenLevel). */
   seen: Record<string, SeenLevel>;
+  /** Admin-only study resources per IELTS skill. */
+  resources: Partial<Record<Skill, Resource[]>>;
 }
 
 export interface WeekDay { label: string; key: string; met: boolean; today: boolean; future: boolean }
@@ -69,6 +75,10 @@ interface ProgressCtx {
   seen: Record<string, SeenLevel>;
   /** Record that a word was interacted with (2). Never lowers the level. */
   markSeen: (wordId: string, level: SeenLevel) => void;
+  resources: Partial<Record<Skill, Resource[]>>;
+  addResource: (skill: Skill, r: Omit<Resource, "id" | "addedAt">) => void;
+  updateResource: (skill: Skill, id: string, r: Omit<Resource, "id" | "addedAt">) => void;
+  removeResource: (skill: Skill, id: string) => void;
   /** Consecutive days the daily goal was met. */
   streak: number;
   xp: number;
@@ -112,6 +122,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [colors, setColors, colorsRef] = usePersisted<Record<string, MarkColor>>("colors", {});
   const [order, setOrderAll, orderRef] = usePersisted<Record<string, string[]>>("order", {});
   const [seen, setSeen, seenRef] = usePersisted<Record<string, SeenLevel>>("seen", {});
+  const [resources, setResources, resourcesRef] = usePersisted<Partial<Record<Skill, Resource[]>>>("resources", {});
   const [lastStudied, setLast] = usePersisted<{ path: string; slug: string } | null>("last", null);
 
   const addXp = useCallback((n: number) => {
@@ -134,6 +145,17 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new CustomEvent("ibv:confetti"));
     }
   }, [dailyRef, goalRef, setDaily]);
+
+  const addResource = useCallback((skill: Skill, r: Omit<Resource, "id" | "addedAt">) => {
+    const item: Resource = { ...r, id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, addedAt: Date.now() };
+    setResources({ ...resourcesRef.current, [skill]: [item, ...(resourcesRef.current[skill] ?? [])] });
+  }, [resourcesRef, setResources]);
+  const updateResource = useCallback((skill: Skill, id: string, r: Omit<Resource, "id" | "addedAt">) => {
+    setResources({ ...resourcesRef.current, [skill]: (resourcesRef.current[skill] ?? []).map((x) => (x.id === id ? { ...x, ...r } : x)) });
+  }, [resourcesRef, setResources]);
+  const removeResource = useCallback((skill: Skill, id: string) => {
+    setResources({ ...resourcesRef.current, [skill]: (resourcesRef.current[skill] ?? []).filter((x) => x.id !== id) });
+  }, [resourcesRef, setResources]);
 
   const markSeen = useCallback((id: string, level: SeenLevel) => {
     if ((seenRef.current[id] ?? 0) >= level) return;
@@ -202,8 +224,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null); setColors({}); setOrderAll({}); setSeen({});
   }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast, setColors, setOrderAll, setSeen]);
 
-  const syncData = useMemo<SyncData>(() => ({ marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, last: lastStudied, colors, order, seen }),
-    [marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, lastStudied, colors, order, seen]);
+  const syncData = useMemo<SyncData>(() => ({ marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, last: lastStudied, colors, order, seen, resources }),
+    [marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, lastStudied, colors, order, seen, resources]);
 
   const applySync = useCallback((d: Partial<SyncData>) => {
     if (d.marks) setMarks(d.marks);
@@ -219,7 +241,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     if (d.colors) setColors(d.colors);
     if (d.order) setOrderAll(d.order);
     if (d.seen) setSeen(d.seen);
-  }, [setMarks, setLearnedAt, setDaily, setXp, setGoal, setName, setBook, setWrong, setBonus, setLast, setColors, setOrderAll, setSeen]);
+    if (d.resources) setResources(d.resources);
+  }, [setMarks, setLearnedAt, setDaily, setXp, setGoal, setName, setBook, setWrong, setBonus, setLast, setColors, setOrderAll, setSeen, setResources]);
 
   // streak = consecutive days with daily >= goal, ending today (or yesterday if today isn't done yet)
   const streak = useMemo(() => {
@@ -245,11 +268,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
 
   const value = useMemo<ProgressCtx>(() => ({
-    marks, toggle, statusOf: (id) => marks[id], colors, setColor, order, setOrder, learnedAt, seen, markSeen, streak, xp,
+    marks, toggle, statusOf: (id) => marks[id], colors, setColor, order, setOrder, learnedAt, seen, markSeen, resources, addResource, updateResource, removeResource, streak, xp,
     level: Math.floor(xp / XP_PER_LEVEL) + 1, xpIntoLevel: xp % XP_PER_LEVEL,
     goal, setGoal, daily, todayCount: daily[dayKey()] ?? 0, week, name, setName, book, setBook,
     lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset, syncData, applySync,
-  }), [syncData, applySync, marks, toggle, colors, setColor, order, setOrder, learnedAt, seen, markSeen, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
+  }), [syncData, applySync, marks, toggle, colors, setColor, order, setOrder, learnedAt, seen, markSeen, resources, addResource, updateResource, removeResource, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

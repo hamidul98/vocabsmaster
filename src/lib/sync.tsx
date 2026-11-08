@@ -49,7 +49,7 @@ export function authMessage(e: unknown): string {
   }
 }
 
-const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {}, order: {}, seen: {} };
+const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {}, order: {}, seen: {}, resources: {} };
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -63,6 +63,15 @@ function stable(v: unknown): string {
 const maxMerge = (a: Record<string, number>, b: Record<string, number>) => {
   const out = { ...a };
   for (const [k, n] of Object.entries(b)) out[k] = Math.max(out[k] ?? 0, n);
+  return out;
+};
+
+const mergeResources = (a: SyncData['resources'], b: SyncData['resources']): SyncData['resources'] => {
+  const out: SyncData['resources'] = {};
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof SyncData['resources']>) {
+    const byId = new Map([...(a[k] ?? []), ...(b[k] ?? [])].map((r) => [r.id, r]));
+    out[k] = [...byId.values()].sort((x, y) => y.addedAt - x.addedAt);
+  }
   return out;
 };
 
@@ -91,6 +100,7 @@ function merge(local: SyncData, remote: Partial<SyncData>): SyncData {
     colors: { ...(remote.colors ?? {}), ...local.colors },
     order: { ...(remote.order ?? {}), ...local.order },
     seen: maxMerge(remote.seen ?? {}, local.seen ?? {}) as SyncData['seen'],
+    resources: mergeResources(remote.resources ?? {}, local.resources ?? {}),
   };
 }
 

@@ -1694,3 +1694,27 @@ button.avatar[data-focus-visible] { outline: 2px solid var(--focus); outline-off
 .admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
 .admin-link { display: inline-flex; align-items: center; gap: 6px; }
 .kpi strong.kpi-sm { font-size: 16px; overflow-wrap: anywhere; }
+
+.skill-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 700px) { .skill-grid { grid-template-columns: minmax(0, 1fr); } }
+.skill-card { display: grid; gap: 14px; padding: 22px; border-radius: 22px; text-decoration: none; color: var(--foreground); box-shadow: var(--card-shadow); transition: transform .15s; }
+.skill-card:hover { transform: translateY(-2px); }
+.skill-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.skill-card.purple { background: var(--t-purple); } .skill-card.coral { background: var(--t-coral); } .skill-card.green { background: var(--t-green); } .skill-card.blue { background: var(--t-blue); }
+.skill-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; color: #fff; }
+.skill-card.purple .skill-icon { background: var(--c-purple); } .skill-card.coral .skill-icon { background: var(--c-coral); }
+.skill-card.green .skill-icon { background: var(--c-green); } .skill-card.blue .skill-icon { background: var(--c-blue); }
+.skill-text { display: grid; gap: 4px; } .skill-text strong { font-size: 22px; font-weight: 800; letter-spacing: -.4px; } .skill-text small { color: var(--body); font-size: 13px; }
+.skill-count { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 650; color: var(--body); }
+.res-form { display: grid; gap: 14px; max-width: 640px; }
+.res-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 650; color: var(--body); }
+.res-form label small { font-weight: 500; color: var(--muted); }
+.res-form input, .res-form textarea { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--foreground); resize: vertical; }
+.res-form input:focus-visible, .res-form textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.res-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.res-list li { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 16px; }
+.res-main { display: grid; gap: 4px; min-width: 0; } .res-main strong { overflow-wrap: anywhere; } .res-main p { margin: 0; font-size: 13px; color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.res-main a { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; width: fit-content; }
+.res-tools { display: flex; gap: 6px; flex-shrink: 0; }
+.skill-card.orange { background: var(--t-orange); } .skill-card.orange .skill-icon { background: var(--c-orange); }
+@media (min-width: 701px) { .skill-grid .skill-card:first-child:nth-last-child(odd) { grid-column: 1 / -1; } }
