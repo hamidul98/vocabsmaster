@@ -50,13 +50,14 @@ const markStyle = (hex?: string) => hex ? { '--mark': hex } as CSSProperties : u
 
 export default function WordCard({ word, hideMeanings=false, source }: { word: Word; hideMeanings?: boolean; source?: React.ReactNode }) {
   const [revealed,setRevealed]=useState(false);
-  const { colors } = useProgress();
+  const { colors, markSeen } = useProgress();
   const hex = colorHex(colors[word.id]);
+  const say = () => { markSeen(word.id, 2); speak(word.word); };
   return <Card className={`word-card ${hex ? 'has-mark' : ''}`} style={markStyle(hex)}><Card.Header>
     <div><h3>{word.word}</h3><div className="chips">{word.fields.filter(f=>f.kind==='pos' && f.value).map((f,i)=><Chip key={i} size="sm" variant="soft">{f.value}</Chip>)}</div></div>
-    <div className="card-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={()=>speak(word.word)}><Icon name="sound"/></Button><WordActions word={word}/><ColorPicker word={word}/></div>
+    <div className="card-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={say}><Icon name="sound"/></Button><WordActions word={word}/><ColorPicker word={word}/></div>
   </Card.Header>
-  <Card.Content>{hideMeanings&&!revealed?<Button variant="secondary" fullWidth className="reveal-button" onPress={()=>setRevealed(true)}>Tap to reveal meaning</Button>:<WordDetails word={word}/>}</Card.Content>
+  <Card.Content>{hideMeanings&&!revealed?<Button variant="secondary" fullWidth className="reveal-button" onPress={()=>{setRevealed(true);markSeen(word.id,2);}}>Tap to reveal meaning</Button>:<WordDetails word={word}/>}</Card.Content>
   {source && <Card.Footer><div className="word-source">{source}</div></Card.Footer>}</Card>;
 }
 
@@ -72,22 +73,23 @@ export interface RowDrag {
 export function WordRow({ word, hideMeanings=false, index, drag }: { word: Word; hideMeanings?: boolean; index?: number; drag?: RowDrag }) {
   const [open,setOpen]=useState(false);
   const [revealed,setRevealed]=useState(false);
-  const { colors } = useProgress();
+  const { colors, markSeen } = useProgress();
   const hex = colorHex(colors[word.id]);
+  const say = () => { markSeen(word.id, 2); speak(word.word); };
   const pos = word.fields.find(f=>f.kind==='pos' && f.value)?.value;
   const bangla = word.fields.find(f=>f.kind==='bangla' && f.value)?.value ?? word.fields.find(f=>f.kind==='meaning' && f.value)?.value;
   const hidden = hideMeanings && !revealed;
   return <li ref={drag?.ref} className={`word-row ${hex ? 'has-mark' : ''} ${open ? 'open' : ''} ${drag?.dragging ? 'dragging' : ''}`} style={{ ...markStyle(hex), ...drag?.style }}>
     <div className="row-main">
       {drag?.handle}
-      <button type="button" className="row-toggle" aria-expanded={open} onClick={()=>{setOpen(o=>!o); setRevealed(true);}}>
+      <button type="button" className="row-toggle" aria-expanded={open} onClick={()=>{setOpen(o=>!o); setRevealed(true); markSeen(word.id,2);}}>
         {index!==undefined && <span className="row-num">{index+1}</span>}
         <span className="row-word">{word.word}</span>
         {pos && <span className="row-pos">{pos}</span>}
         <span className={`row-meaning font-bangla ${hidden ? 'is-hidden' : ''}`}>{hidden ? 'Tap to reveal' : bangla}</span>
         <Icon name="down" size={20} />
       </button>
-      <div className="row-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={()=>speak(word.word)}><Icon name="sound" size={18}/></Button><WordActions word={word}/><ColorPicker word={word}/></div>
+      <div className="row-tools"><Button isIconOnly size="sm" variant="outline" className="round" aria-label={`Pronounce ${word.word}`} onPress={say}><Icon name="sound" size={18}/></Button><WordActions word={word}/><ColorPicker word={word}/></div>
     </div>
     {open && <div className="row-details"><WordDetails word={word}/></div>}
   </li>;

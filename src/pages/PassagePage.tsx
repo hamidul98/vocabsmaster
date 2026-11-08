@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { usePassage, useLibrary } from '@/hooks/useLibrary';
-import { shortBook } from '@/hooks/useStats';
+import { shortBook, usePassageStats } from '@/hooks/useStats';
 import { useProgress } from '@/lib/progress';
 import { Study } from '@/components/Study';
 import { Ring } from '@/components/art';
@@ -13,6 +13,7 @@ export default function PassagePage() {
   const { ref, passage, error, unknown } = usePassage(slug);
   const { indexError, reload } = useLibrary();
   const { marks, setLastStudied, completePassage } = useProgress();
+  const stat = usePassageStats().find((s) => s.ref.slug === slug);
   const total = passage?.words.length ?? 0;
   const learned = passage ? passage.words.filter((w) => marks[w.id] === 'learned').length : 0;
 
@@ -29,9 +30,9 @@ export default function PassagePage() {
       <Link to="/library" className="back-btn" aria-label="Back to library"><Icon name="back" size={22} /></Link>
       <div>
         <nav className="crumbs" aria-label="Breadcrumb"><Link to={`/library?book=${ref.bookNumber}`}>{shortBook(ref.bookName).replace(/ Academic$/, '')}</Link><Icon name="chevron" size={16} /><Link to={`/library?book=${ref.bookNumber}&test=${ref.testNumber}`}>Test {ref.testNumber}</Link><Icon name="chevron" size={16} /><strong>Passage {ref.passageNumber}</strong></nav>
-        <p className="muted">{total} words · {learned} learned</p>
+        <p className="muted">{total} words · {learned} learned{stat && stat.engaged > 0 ? ` · ${stat.engaged} worked on` : ''}</p>
       </div>
-      <Ring value={total ? learned / total : 0} size={64} stroke={7} label={`${learned} of ${total} learned`}><small className="ring-pct">{total ? Math.round((learned / total) * 100) : 0}%</small></Ring>
+      <Ring value={(stat?.progress ?? 0) / 100} size={64} stroke={7} label={`${learned} of ${total} learned, ${stat?.progress ?? 0}% covered`}><small className="ring-pct">{stat?.progress ?? 0}%</small></Ring>
     </div>
     <Study key={slug} words={passage.words} mode={mode} base={`/${slug}`} orderKey={slug} />
   </>;

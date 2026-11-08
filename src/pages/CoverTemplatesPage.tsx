@@ -9,7 +9,7 @@ import { usePassageStats, type PassageStat } from '@/hooks/useStats';
 
 const sample: PassageStat = {
   ref: { bookName: 'IELTS 21 Academic 2026', bookNumber: 21, testNumber: 3, passageNumber: 1, slug: '21-T3-P1', tabName: '21- T3-P1', link: '' },
-  loaded: true, count: 251, learned: 0, difficult: 0, percent: 0, status: 'new',
+  loaded: true, count: 251, learned: 0, difficult: 0, percent: 0, engaged: 0, progress: 0, status: 'new',
 };
 
 export default function CoverTemplatesPage() {

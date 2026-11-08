@@ -5,6 +5,9 @@ import { toast } from '@heroui/react';
 import { auth, db, firebaseEnabled } from './firebase';
 import { useProgress, type SyncData } from './progress';
 
+/** Shown as "Admin" in the greeting. Display only: it grants no extra access. */
+export const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL as string | undefined)?.toLowerCase() || 'hamidulhaquetitas@gmail.com';
+
 export type SyncStatus = 'off' | 'syncing' | 'synced' | 'error';
 
 interface AuthCtx {
@@ -16,6 +19,8 @@ interface AuthCtx {
   status: SyncStatus;
   /** Email/password users must confirm their email before using the app. */
   verified: boolean;
+  /** Signed in (and verified) with the admin email. */
+  isAdmin: boolean;
   signIn: () => Promise<void>;
   signInEmail: (email: string, password: string) => Promise<void>;
   signUpEmail: (name: string, email: string, password: string) => Promise<void>;
@@ -44,7 +49,7 @@ export function authMessage(e: unknown): string {
   }
 }
 
-const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {}, order: {} };
+const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {}, order: {}, seen: {} };
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -85,6 +90,7 @@ function merge(local: SyncData, remote: Partial<SyncData>): SyncData {
     last: local.last ?? remote.last ?? null,
     colors: { ...(remote.colors ?? {}), ...local.colors },
     order: { ...(remote.order ?? {}), ...local.order },
+    seen: maxMerge(remote.seen ?? {}, local.seen ?? {}) as SyncData['seen'],
   };
 }
 
@@ -218,8 +224,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast('Signed out.');
   }, [applySync]);
 
-  const value = useMemo<AuthCtx>(() => ({ enabled: firebaseEnabled, user, loading, status, verified, signIn, signInEmail, signUpEmail, resetPassword, resendVerification, checkVerified, signOut }),
-    [user, loading, status, verified, signIn, signInEmail, signUpEmail, resetPassword, resendVerification, checkVerified, signOut]);
+  const isAdmin = verified && user?.email?.toLowerCase() === ADMIN_EMAIL;
+  const value = useMemo<AuthCtx>(() => ({ enabled: firebaseEnabled, user, loading, status, verified, isAdmin, signIn, signInEmail, signUpEmail, resetPassword, resendVerification, checkVerified, signOut }),
+    [user, loading, status, verified, isAdmin, signIn, signInEmail, signUpEmail, resetPassword, resendVerification, checkVerified, signOut]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

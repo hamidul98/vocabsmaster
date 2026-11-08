@@ -16,7 +16,7 @@ const links = [
   { to: '/library', name: 'Library', icon: 'library' },
   { to: '/practice', name: 'Practice', icon: 'practice' },
   { to: '/difficult', name: 'Difficult Words', icon: 'star' },
-  { to: '/progress', name: 'Progress', icon: 'progress' },
+  { to: '/progress', name: 'Analytics', icon: 'progress' },
   { to: '/search', name: 'Search', icon: 'search' },
 ];
 const mobileLinks = [
@@ -53,9 +53,9 @@ export default function Layout() {
   const submitSearch = (e: FormEvent) => { e.preventDefault(); navigate(`/search?q=${encodeURIComponent(q.trim())}`); };
 
   const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const initials = name.trim().split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || 'L';
-  const Brand = <Link to="/" className="brand"><img className="brand-mark" src="brand-icon.svg" alt="" width={32} height={32}/><span className="brand-text"><strong>Vocabs Master</strong><small>IELTS Book Vocab</small></span></Link>;
+  const Brand = <Link to="/" className="brand"><img className="brand-mark" src="brand-icon.svg" alt="" width={32} height={32}/><span className="brand-text"><strong>Vocabs Master</strong><small>IELTS Book Vocab</small></span>{isAdmin && <span className="admin-badge">Admin</span>}</Link>;
   const Stats = <div className="top-stats">
     <span className="stat-pill flame" title="Day streak"><Icon name="flame" size={22} filled/>{streak}</span>
     <span className="stat-pill gem" title="XP"><Icon name="gem" size={22} filled/>{xp.toLocaleString()}</span>
@@ -80,7 +80,7 @@ export default function Layout() {
         <Button isIconOnly size="sm" variant="ghost" className="theme-opt" aria-label="Light theme" aria-pressed={theme === 'light'} onPress={() => setTheme('light')}><Icon name="sun" size={20} filled={theme === 'light'}/></Button>
         <Button isIconOnly size="sm" variant="ghost" className="theme-opt" aria-label="Dark theme" aria-pressed={theme === 'dark'} onPress={() => setTheme('dark')}><Icon name="moon" size={20} filled={theme === 'dark'}/></Button>
       </div>
-      <nav aria-label="Main navigation" className="sidebar-nav">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.to === '/'} title={l.name} aria-label={l.name}><Icon name={l.icon} size={22}/><span className="nav-label">{l.name}</span></NavLink>)}</nav>
+      <nav aria-label="Main navigation" className="sidebar-nav">{[...links, ...(isAdmin ? [{ to: '/admin', name: 'Admin Features', icon: 'admin_panel_settings' }] : [])].map((l) => <NavLink key={l.to} to={l.to} end={l.to === '/'} title={l.name} aria-label={l.name}><Icon name={l.icon} size={22}/><span className="nav-label">{l.name}</span></NavLink>)}</nav>
       <div className="sidebar-foot">
         <button type="button" className="rail-btn" title={standalone ? 'Installed — works offline' : pwa.canInstall ? 'Install the app' : pwa.showIosHint ? 'Install: tap Share, then Add to Home Screen' : 'Install: use your browser menu, then Install app'}
           aria-label={standalone ? 'App installed, works offline' : 'Install the app'} onClick={() => (pwa.canInstall ? void pwa.install() : navigate('/settings'))}><Icon name={standalone ? 'offline' : 'phone'} size={22}/></button>
@@ -108,7 +108,7 @@ export default function Layout() {
     <nav className="mobile-nav" aria-label="Mobile navigation" data-active={activeTab < 0 ? 'none' : 'on'} style={{ '--i': Math.max(activeTab, 0) } as CSSProperties}>
       <div className="mn-bar" aria-hidden="true"/>
       <span className="mn-bubble" aria-hidden="true"><Icon name={mobileLinks[Math.max(activeTab, 0)].icon} size={26} filled/></span>
-      {mobileLinks.map((l) => <NavLink key={l.to} to={l.to} end={l.to === '/'}><Icon name={l.icon} size={24}/><span>{l.name}</span></NavLink>)}
+      {mobileLinks.map((l, i) => <NavLink key={l.to} to={l.to} end={l.to === '/'} className={({ isActive }) => (isActive || i === activeTab ? 'active' : '')}><Icon name={l.icon} size={24}/><span>{l.name}</span></NavLink>)}
     </nav>
     <Toast.Provider/>
     <Confetti/>

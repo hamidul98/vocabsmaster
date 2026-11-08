@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { shortBook, type PassageStat } from '@/hooks/useStats';
 import { BookThumb } from './art';
 import type { CoverVariant } from './BookCover';
-import { Icon, Meter } from './ui';
+import { Icon, StackedMeter } from './ui';
 
 export const passageTitle = (s: PassageStat) => `Passage ${s.ref.passageNumber} — ${s.ref.bookNumber} T${s.ref.testNumber}`;
 export const passageCrumb = (s: PassageStat) => `${shortBook(s.ref.bookName)} • Test ${s.ref.testNumber}`;
@@ -27,7 +27,8 @@ export default function PassageCard({ stat, wide = false, coverVariant }: { stat
       <div className="pc-info">
         <h3>{wide ? passageTitle(stat) : `Passage ${stat.ref.passageNumber}`}</h3>
         <p>{wide ? passageCrumb(stat) : stat.loaded ? `${stat.count} words` : 'Loading…'}</p>
-        <div className="pc-progress"><Meter value={stat.percent} label={`${stat.percent}% learned`}/><span>{stat.percent}%</span></div>
+        <div className="pc-progress"><StackedMeter learned={stat.percent} covered={stat.progress} label={`${stat.percent}% learned, ${stat.progress}% covered`}/><span>{stat.progress}%</span></div>
+        <p className="pc-count">{stat.count ? `${stat.learned} / ${stat.count} learned` : 'Open to load words'}{stat.engaged > 0 && ` · ${stat.engaged} worked on`}</p>
         {!wide && <div className="pc-meta">
           <Chip size="sm" variant="soft" className={st.cls}>{st.label}</Chip>
           {stat.difficult > 0 && <Chip size="sm" variant="soft" className="st-star"><Icon name="star" size={14} filled/> {stat.difficult}</Chip>}

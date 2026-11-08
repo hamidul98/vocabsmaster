@@ -19,6 +19,12 @@ export function Icon({ name, size = 20, filled = false }: { name: string; size?:
 export function Meter({ value, label }: { value: number; label: string }) {
   return <ProgressBar value={value} aria-label={label} className="meter"><ProgressBar.Track><ProgressBar.Fill /></ProgressBar.Track></ProgressBar>;
 }
+/** Two-layer bar: light = seen/engaged (covered), solid = learned. */
+export function StackedMeter({ learned, covered, label }: { learned: number; covered: number; label: string }) {
+  return <div className="meter stacked" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={learned}>
+    <div className="stacked-track"><i className="covered" style={{ width: `${Math.max(covered, learned)}%` }}/><i className="learned" style={{ width: `${learned}%` }}/></div>
+  </div>;
+}
 export function SearchInput({ value, onChange, placeholder = 'Search vocabulary…' }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return <TextField aria-label={placeholder} value={value} onChange={onChange} className="search-field"><Icon name="search"/><Input placeholder={placeholder}/></TextField>;
 }

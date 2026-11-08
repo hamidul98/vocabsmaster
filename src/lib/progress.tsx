@@ -5,6 +5,10 @@ import type { Word } from "./types";
 import type { MarkColor } from "./colors";
 
 export type Status = "learned" | "difficult";
+/** How far a word has been explored: 2 = interacted with (level 1 is legacy and ignored). */
+export type SeenLevel = 1 | 2;
+/** Share of a word counted as "covered": learned 100%, engaged/difficult 60%. */
+export const WEIGHT = { learned: 1, engaged: 0.6 } as const;
 type Marks = Record<string, Status>; // key = Word.id
 
 export const XP_PER_LEVEL = 250;
@@ -43,6 +47,8 @@ export interface SyncData {
   colors: Record<string, MarkColor>;
   /** Custom word order per collection (e.g. passage slug -> word ids). */
   order: Record<string, string[]>;
+  /** Word id -> how far it was explored (see SeenLevel). */
+  seen: Record<string, SeenLevel>;
 }
 
 export interface WeekDay { label: string; key: string; met: boolean; today: boolean; future: boolean }
@@ -60,6 +66,9 @@ interface ProgressCtx {
   /** Save a custom word order for a collection; null restores the sheet order. */
   setOrder: (key: string, ids: string[] | null) => void;
   learnedAt: Record<string, number>;
+  seen: Record<string, SeenLevel>;
+  /** Record that a word was interacted with (2). Never lowers the level. */
+  markSeen: (wordId: string, level: SeenLevel) => void;
   /** Consecutive days the daily goal was met. */
   streak: number;
   xp: number;
@@ -102,6 +111,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [bonus, setBonus] = usePersisted<string[]>("bonus", []);
   const [colors, setColors, colorsRef] = usePersisted<Record<string, MarkColor>>("colors", {});
   const [order, setOrderAll, orderRef] = usePersisted<Record<string, string[]>>("order", {});
+  const [seen, setSeen, seenRef] = usePersisted<Record<string, SeenLevel>>("seen", {});
   const [lastStudied, setLast] = usePersisted<{ path: string; slug: string } | null>("last", null);
 
   const addXp = useCallback((n: number) => {
@@ -125,7 +135,13 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     }
   }, [dailyRef, goalRef, setDaily]);
 
+  const markSeen = useCallback((id: string, level: SeenLevel) => {
+    if ((seenRef.current[id] ?? 0) >= level) return;
+    setSeen({ ...seenRef.current, [id]: level });
+  }, [seenRef, setSeen]);
+
   const toggle = useCallback((id: string, status: Status) => {
+    markSeen(id, 2);
     const next = { ...marksRef.current };
     const clearing = next[id] === status;
     if (clearing) delete next[id];
@@ -141,14 +157,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       addXp(XP.learned);
       countReview();
     }
-  }, [addXp, countReview, marksRef, setLearnedAt, setMarks]);
+  }, [addXp, countReview, markSeen, marksRef, setLearnedAt, setMarks]);
 
   const setColor = useCallback((id: string, color: MarkColor | null) => {
     const next = { ...colorsRef.current };
-    if (color) next[id] = color;
+    if (color) {
+      // first time a word is touched today's goal counts it once (re-colouring does not)
+      if (!next[id] && (seenRef.current[id] ?? 0) < 2) countReview();
+      next[id] = color;
+      markSeen(id, 2);
+    }
     else delete next[id];
     setColors(next);
-  }, [colorsRef, setColors]);
+  }, [colorsRef, countReview, markSeen, seenRef, setColors]);
 
   const setOrder = useCallback((key: string, ids: string[] | null) => {
     const next = { ...orderRef.current };
@@ -160,10 +181,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const reviewCard = useCallback(() => { addXp(XP.flashcard); countReview(); }, [addXp, countReview]);
 
   const answerQuiz = useCallback((word: Word, correct: boolean) => {
+    markSeen(word.id, 2);
     countReview();
     if (correct) addXp(XP.quiz);
     else setWrong((w) => ({ ...w, [word.id]: (w[word.id] ?? 0) + 1 }));
-  }, [addXp, countReview, setWrong]);
+  }, [addXp, countReview, markSeen, setWrong]);
 
   const completePassage = useCallback((slug: string) => {
     setBonus((b) => {
@@ -177,11 +199,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const setLastStudied = useCallback((path: string, slug: string) => setLast({ path, slug }), [setLast]);
 
   const reset = useCallback(() => {
-    setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null); setColors({}); setOrderAll({});
-  }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast, setColors, setOrderAll]);
+    setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null); setColors({}); setOrderAll({}); setSeen({});
+  }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast, setColors, setOrderAll, setSeen]);
 
-  const syncData = useMemo<SyncData>(() => ({ marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, last: lastStudied, colors, order }),
-    [marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, lastStudied, colors, order]);
+  const syncData = useMemo<SyncData>(() => ({ marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, last: lastStudied, colors, order, seen }),
+    [marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, lastStudied, colors, order, seen]);
 
   const applySync = useCallback((d: Partial<SyncData>) => {
     if (d.marks) setMarks(d.marks);
@@ -196,7 +218,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     if (d.last !== undefined) setLast(d.last);
     if (d.colors) setColors(d.colors);
     if (d.order) setOrderAll(d.order);
-  }, [setMarks, setLearnedAt, setDaily, setXp, setGoal, setName, setBook, setWrong, setBonus, setLast, setColors, setOrderAll]);
+    if (d.seen) setSeen(d.seen);
+  }, [setMarks, setLearnedAt, setDaily, setXp, setGoal, setName, setBook, setWrong, setBonus, setLast, setColors, setOrderAll, setSeen]);
 
   // streak = consecutive days with daily >= goal, ending today (or yesterday if today isn't done yet)
   const streak = useMemo(() => {
@@ -222,11 +245,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
 
   const value = useMemo<ProgressCtx>(() => ({
-    marks, toggle, statusOf: (id) => marks[id], colors, setColor, order, setOrder, learnedAt, streak, xp,
+    marks, toggle, statusOf: (id) => marks[id], colors, setColor, order, setOrder, learnedAt, seen, markSeen, streak, xp,
     level: Math.floor(xp / XP_PER_LEVEL) + 1, xpIntoLevel: xp % XP_PER_LEVEL,
     goal, setGoal, daily, todayCount: daily[dayKey()] ?? 0, week, name, setName, book, setBook,
     lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset, syncData, applySync,
-  }), [syncData, applySync, marks, toggle, colors, setColor, order, setOrder, learnedAt, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
+  }), [syncData, applySync, marks, toggle, colors, setColor, order, setOrder, learnedAt, seen, markSeen, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

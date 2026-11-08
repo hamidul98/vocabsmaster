@@ -77,7 +77,7 @@ export function Study({ words: sheetWords, mode, base, orderKey }: { words:Word[
 }
 
 export function Flashcards({ words }: { words:Word[] }) {
-  const { toggle, statusOf, reviewCard } = useProgress();
+  const { toggle, statusOf, reviewCard, markSeen } = useProgress();
   const [deck,setDeck]=useState(words);
   const [index,setIndex]=useState(0);
   const [flipped,setFlipped]=useState(false);
@@ -88,7 +88,8 @@ export function Flashcards({ words }: { words:Word[] }) {
   const word=deck[index];
   const move=(n:number)=>{setIndex(i=>(i+n+deck.length)%deck.length);setFlipped(false);};
   const flip=()=>{
-    if(!flipped&&word&&!reviewed.current.has(word.id)){reviewed.current.add(word.id);reviewCard();} // +2 XP per new card
+    if(!flipped&&word&&!reviewed.current.has(word.id)){reviewed.current.add(word.id);reviewCard();}
+    if(word) markSeen(word.id,2); // +2 XP per new card
     setFlipped(v=>!v);
   };
   const mark=(status:'learned'|'difficult')=>{
