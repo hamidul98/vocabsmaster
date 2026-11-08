@@ -1,0 +1,32 @@
+name: Sync Google Drive resources
+
+# Checks the linked Drive folders every 3 hours (and on demand) and commits the saved copy when anything changed.
+on:
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read Drive folders
+        run: node scripts/sync-drive.mjs
+      - name: Commit changes
+        run: |
+          if [ -n "$(git status --porcelain src/lib)" ]; then
+            git config user.name "drive-sync[bot]"
+            git config user.email "drive-sync@users.noreply.github.com"
+            git add src/lib/driveSnapshot.json src/lib/driveSources.json
+            git commit -m "Sync Google Drive resources"
+            git push
+          else
+            echo "Nothing new in Drive."
+          fi

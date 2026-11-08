@@ -7,9 +7,11 @@ import type { MarkColor } from "./colors";
 export type Status = "learned" | "difficult";
 /** How far a word has been explored: 2 = interacted with (level 1 is legacy and ignored). */
 export type SeenLevel = 1 | 2;
-export type Skill = "pre-ielts" | "reading" | "writing" | "speaking" | "listening";
+export type Skill = "pre-ielts" | "reading" | "writing" | "speaking" | "listening" | "vocabulary" | "others";
 /** An admin-added study resource (kept in the admin's own synced data, so no one else can see it). */
-export interface Resource { id: string; title: string; url: string; note: string; addedAt: number }
+/** A file inside a resource (e.g. one PDF in a Drive folder). */
+export interface ResourceItem { title: string; url: string; kind: "pdf" | "video" | "audio" | "file"; /** Embeddable address for the in-page preview. */ preview?: string }
+export interface Resource { id: string; title: string; url: string; note: string; addedAt: number; items?: ResourceItem[]; /** Folder colour (see TONES in AdminSkillPage). */ tone?: string; /** Set when this entry is a linked Google Drive folder (read live from Drive). */ driveId?: string }
 
 /** Share of a word counted as "covered": learned 100%, engaged/difficult 60%. */
 export const WEIGHT = { learned: 1, engaged: 0.6 } as const;
