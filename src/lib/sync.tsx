@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut as fbSignOut, type User } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut as fbSignOut, updateProfile, type User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { toast } from '@heroui/react';
 import { auth, db, firebaseEnabled } from './firebase';
@@ -14,9 +14,37 @@ interface AuthCtx {
   /** True until Firebase reports the initial sign-in state. */
   loading: boolean;
   status: SyncStatus;
+  /** Email/password users must confirm their email before using the app. */
+  verified: boolean;
   signIn: () => Promise<void>;
+  signInEmail: (email: string, password: string) => Promise<void>;
+  signUpEmail: (name: string, email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
+  /** Re-check whether the email link has been clicked. Returns true when verified. */
+  checkVerified: () => Promise<boolean>;
   signOut: () => Promise<void>;
 }
+
+/** Friendly text for Firebase auth error codes. */
+export function authMessage(e: unknown): string {
+  const code = (e as { code?: string }).code ?? '';
+  switch (code) {
+    case 'auth/invalid-credential': case 'auth/wrong-password': case 'auth/user-not-found': case 'auth/invalid-login-credentials':
+      return 'Email or password is incorrect.';
+    case 'auth/email-already-in-use': return 'An account with this email already exists. Try signing in instead.';
+    case 'auth/weak-password': return 'Password must be at least 6 characters.';
+    case 'auth/invalid-email': return 'Enter a valid email address.';
+    case 'auth/missing-email': return 'Enter your email address first.';
+    case 'auth/too-many-requests': return 'Too many attempts. Please wait a minute and try again.';
+    case 'auth/network-request-failed': return 'No internet connection. Check your network and try again.';
+    case 'auth/operation-not-allowed': return 'This sign-in method isn’t enabled yet.';
+    case 'auth/unauthorized-domain': return 'This website isn’t allowed to sign in yet (add it in Firebase → Authorized domains).';
+    default: return 'Something went wrong. Please try again.';
+  }
+}
+
+const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {} };
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -68,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(firebaseEnabled);
   const [status, setStatus] = useState<SyncStatus>('off');
+  const [verified, setVerified] = useState(false);
   const dataRef = useRef(syncData);
   dataRef.current = syncData;
   const lastJson = useRef<string | null>(null);
@@ -76,12 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth) return;
-    return onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+    return onAuthStateChanged(auth, (u) => { setUser(u); setVerified(!!u?.emailVerified); setLoading(false); });
   }, []);
 
   // On sign-in: pull, merge, push, then listen for changes from other devices.
   useEffect(() => {
-    if (!user || !db) { ready.current = false; setStatus('off'); return; }
+    if (!user || !verified || !db) { ready.current = false; setStatus('off'); return; }
     const ref = doc(db, 'users', user.uid);
     let unsub: (() => void) | undefined;
     let cancelled = false;
@@ -113,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
     return () => { cancelled = true; unsub?.(); ready.current = false; clearTimeout(timer.current); };
-  }, [user, applySync]);
+  }, [user, verified, applySync]);
 
   // Push local changes (debounced).
   useEffect(() => {
@@ -142,22 +171,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
       await signInWithPopup(auth, provider);
-      toast.success('Signed in. Your progress now syncs across devices.');
     } catch (e) {
       const code = (e as { code?: string }).code ?? '';
       // Popups are often blocked in installed apps / some mobile browsers.
       if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') await signInWithRedirect(auth, provider);
-      else if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') { console.error(e); toast.danger('Sign-in failed. Please try again.'); }
+      else if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') { console.error(e); throw e; }
     }
+  }, []);
+
+  const signInEmail = useCallback(async (email: string, password: string) => {
+    if (!auth) return;
+    await signInWithEmailAndPassword(auth, email.trim(), password);
+  }, []);
+
+  const signUpEmail = useCallback(async (displayName: string, email: string, password: string) => {
+    if (!auth) return;
+    const { user: u } = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    if (displayName.trim()) await updateProfile(u, { displayName: displayName.trim() });
+    await sendEmailVerification(u);
+    setUser(auth.currentUser);
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    if (!auth) return;
+    await sendPasswordResetEmail(auth, email.trim());
+  }, []);
+
+  const resendVerification = useCallback(async () => {
+    if (auth?.currentUser) await sendEmailVerification(auth.currentUser);
+  }, []);
+
+  const checkVerified = useCallback(async () => {
+    const u = auth?.currentUser;
+    if (!u) return false;
+    await u.reload();
+    if (u.emailVerified) await u.getIdToken(true); // refresh token so the database sees the new state
+    setVerified(u.emailVerified);
+    return u.emailVerified;
   }, []);
 
   const signOut = useCallback(async () => {
     if (!auth) return;
     await fbSignOut(auth);
-    toast('Signed out. Progress stays saved on this device.');
-  }, []);
+    applySync(EMPTY); // don't leave this account's progress for the next person on this device
+    toast('Signed out.');
+  }, [applySync]);
 
-  const value = useMemo<AuthCtx>(() => ({ enabled: firebaseEnabled, user, loading, status, signIn, signOut }), [user, loading, status, signIn, signOut]);
+  const value = useMemo<AuthCtx>(() => ({ enabled: firebaseEnabled, user, loading, status, verified, signIn, signInEmail, signUpEmail, resetPassword, resendVerification, checkVerified, signOut }),
+    [user, loading, status, verified, signIn, signInEmail, signUpEmail, resetPassword, resendVerification, checkVerified, signOut]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
