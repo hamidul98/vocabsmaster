@@ -29,6 +29,19 @@ The public Google Sheet is configured in `src/lib/sheet.ts`. Keep the sheet shar
 
 Add books/tests/passages in the Main tab using the existing headers. A passage tab must follow the exact format `21- T3-P1` (including the space after the hyphen). The word header must include “word” or “vocab”. Other headers become dynamic fields; Bengali headers and Bangla/bn/Bengali are recognized as Bangla meanings, part of speech becomes a badge, and sentence/example becomes italic text. Empty rows and unlabelled columns are ignored.
 
+## Google sign-in and sync (optional)
+
+Without setup, progress stays in the current browser. To sync learned/difficult words, colour marks, XP and streak across devices:
+
+1. Create a project at https://console.firebase.google.com (free Spark plan is enough).
+2. **Build → Authentication → Get started → Sign-in method → Google → Enable.**
+3. **Build → Firestore Database → Create database** (production mode), then paste `firestore.rules` into the **Rules** tab and publish.
+4. **Project settings → Your apps → Web (`</>`)** to register a web app, and copy its config.
+5. Copy `.env.example` to `.env.local`, fill in the four values, and restart `npm run dev`.
+6. When you deploy, add your site's domain under **Authentication → Settings → Authorized domains** and set the same `VITE_FIREBASE_*` variables in Netlify/Vercel.
+
+Data is stored per Google account in `users/{uid}`; the rules allow each user to access only their own document.
+
 ## Deploy
 
 Build with `npm run build`, then publish `dist/` as a static site:

@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { useAuth } from '@/lib/sync';
 import { Button, Toast, toast } from '@heroui/react';
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
@@ -51,6 +52,7 @@ export default function Layout() {
   const submitSearch = (e: FormEvent) => { e.preventDefault(); navigate(`/search?q=${encodeURIComponent(q.trim())}`); };
 
   const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  const { user } = useAuth();
   const initials = name.trim().split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || 'L';
   const Brand = <Link to="/" className="brand"><img className="brand-mark" src="brand-icon.svg" alt="" width={32} height={32}/><span className="brand-text"><strong>Vocabs Master</strong><small>IELTS Book Vocab</small></span></Link>;
   const Stats = <div className="top-stats">
@@ -82,7 +84,7 @@ export default function Layout() {
         <button type="button" className="rail-btn" title={standalone ? 'Installed — works offline' : pwa.canInstall ? 'Install the app' : pwa.showIosHint ? 'Install: tap Share, then Add to Home Screen' : 'Install: use your browser menu, then Install app'}
           aria-label={standalone ? 'App installed, works offline' : 'Install the app'} onClick={() => (pwa.canInstall ? void pwa.install() : navigate('/settings'))}><Icon name={standalone ? 'offline' : 'phone'} size={22}/></button>
         <Link to="/settings" className="rail-btn" title="Settings" aria-label="Settings"><Icon name="settings" size={22}/></Link>
-        <Link to="/settings" className="avatar" title={`${name} · Level ${level}`} aria-label={`Profile: ${name}, level ${level}`}>{initials}</Link>
+        <Link to="/settings" className="avatar" title={`${name} · Level ${level}`} aria-label={`Profile: ${name}, level ${level}`}>{user?.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="avatar-img"/> : initials}</Link>
       </div>
     </aside>
     <div className="app-content">

@@ -28,6 +28,21 @@ function usePersisted<T>(key: string, initial: T) {
   return [value, set, ref] as const;
 }
 
+/** Everything that is synced to the cloud when signed in. */
+export interface SyncData {
+  marks: Marks;
+  learnedAt: Record<string, number>;
+  daily: Record<string, number>;
+  xp: number;
+  goal: number;
+  name: string;
+  book: string;
+  wrong: Record<string, number>;
+  bonus: string[];
+  last: { path: string; slug: string } | null;
+  colors: Record<string, MarkColor>;
+}
+
 export interface WeekDay { label: string; key: string; met: boolean; today: boolean; future: boolean }
 
 interface ProgressCtx {
@@ -62,6 +77,10 @@ interface ProgressCtx {
   answerQuiz: (word: Word, correct: boolean) => void;
   completePassage: (slug: string) => void;
   reset: () => void;
+  /** Current synced state (new object whenever any part changes). */
+  syncData: SyncData;
+  /** Replace all synced state (used when cloud data arrives). */
+  applySync: (d: Partial<SyncData>) => void;
 }
 
 const Ctx = createContext<ProgressCtx | null>(null);
@@ -75,7 +94,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [name, setName] = usePersisted<string>("name", "Learner");
   const [book, setBook] = usePersisted<string>("book", "");
   const [wrong, setWrong] = usePersisted<Record<string, number>>("wrong", {});
-  const [, setBonus] = usePersisted<string[]>("bonus", []);
+  const [bonus, setBonus] = usePersisted<string[]>("bonus", []);
   const [colors, setColors, colorsRef] = usePersisted<Record<string, MarkColor>>("colors", {});
   const [lastStudied, setLast] = usePersisted<{ path: string; slug: string } | null>("last", null);
 
@@ -148,6 +167,23 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setMarks({}); setLearnedAt({}); setDaily({}); setXp(0); setWrong({}); setBonus([]); setLast(null); setColors({});
   }, [setMarks, setLearnedAt, setDaily, setXp, setWrong, setBonus, setLast, setColors]);
 
+  const syncData = useMemo<SyncData>(() => ({ marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, last: lastStudied, colors }),
+    [marks, learnedAt, daily, xp, goal, name, book, wrong, bonus, lastStudied, colors]);
+
+  const applySync = useCallback((d: Partial<SyncData>) => {
+    if (d.marks) setMarks(d.marks);
+    if (d.learnedAt) setLearnedAt(d.learnedAt);
+    if (d.daily) setDaily(d.daily);
+    if (typeof d.xp === "number") setXp(d.xp);
+    if (typeof d.goal === "number") setGoal(d.goal);
+    if (typeof d.name === "string") setName(d.name);
+    if (typeof d.book === "string") setBook(d.book);
+    if (d.wrong) setWrong(d.wrong);
+    if (d.bonus) setBonus(d.bonus);
+    if (d.last !== undefined) setLast(d.last);
+    if (d.colors) setColors(d.colors);
+  }, [setMarks, setLearnedAt, setDaily, setXp, setGoal, setName, setBook, setWrong, setBonus, setLast, setColors]);
+
   // streak = consecutive days with daily >= goal, ending today (or yesterday if today isn't done yet)
   const streak = useMemo(() => {
     let d = new Date();
@@ -175,8 +211,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     marks, toggle, statusOf: (id) => marks[id], colors, setColor, learnedAt, streak, xp,
     level: Math.floor(xp / XP_PER_LEVEL) + 1, xpIntoLevel: xp % XP_PER_LEVEL,
     goal, setGoal, daily, todayCount: daily[dayKey()] ?? 0, week, name, setName, book, setBook,
-    lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset,
-  }), [marks, toggle, colors, setColor, learnedAt, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
+    lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset, syncData, applySync,
+  }), [syncData, applySync, marks, toggle, colors, setColor, learnedAt, streak, xp, goal, setGoal, daily, week, name, setName, book, setBook, lastStudied, setLastStudied, wrong, reviewCard, answerQuiz, completePassage, reset]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

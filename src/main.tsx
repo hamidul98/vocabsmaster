@@ -5,13 +5,16 @@ import "./index.css";
 import App from "./App";
 import { LibraryProvider } from "./hooks/useLibrary";
 import { ProgressProvider } from "./lib/progress";
+import { AuthProvider } from "./lib/sync";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HashRouter>
       <LibraryProvider>
         <ProgressProvider>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </ProgressProvider>
       </LibraryProvider>
     </HashRouter>

@@ -1528,3 +1528,18 @@ html.dark .hero-bg::after { background-image: radial-gradient(rgba(125, 176, 255
   .row-tools { margin-left: auto; }
   .row-details { padding: 12px 14px 16px; }
 }
+
+/* ===== Account & sync ===== */
+.avatar { overflow: hidden; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.account-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.account-row h3 { margin: 0; font-size: 16px; }
+.account-row p { margin: 2px 0 0; font-size: 13px; }
+.account-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.sync-status { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin: 0 0 14px; color: var(--body); }
+.sync-status.synced .material-symbols-outlined { color: #16a34a; }
+.sync-status.error .material-symbols-outlined { color: #dc2626; }
+.sync-status.syncing .material-symbols-outlined { color: var(--accent); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.google-btn { background: #fff !important; color: #1f1f1f !important; border: 1px solid #dadce0 !important; gap: 10px; font-weight: 600; }
+.dark .google-btn { background: #131314 !important; color: #e3e3e3 !important; border-color: #8e918f !important; }
