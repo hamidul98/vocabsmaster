@@ -1817,3 +1817,23 @@ button.avatar[data-focus-visible] { outline: 2px solid var(--focus); outline-off
 .setup-note { display: grid; gap: 8px; padding: 18px 20px; border-radius: 18px; background: var(--soft); color: var(--body); font-size: 14px; }
 .setup-note ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .setup-note code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--surface); color: var(--foreground); }
+
+/* Drive history */
+.hist-link { display: flex; align-items: center; gap: 14px; padding: 16px 18px; margin-bottom: 18px; border-radius: 18px; background: var(--surface); box-shadow: var(--card-shadow); text-decoration: none; color: var(--foreground); }
+.hist-link > span:nth-child(2) { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.hist-link small { color: var(--muted); font-size: 13px; }
+.hist-link:hover { background: var(--soft); }
+.hist-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.new-pill { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--c-coral); color: #fff; }
+.nav-dot { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--c-coral); border: 2px solid var(--surface); }
+.sidebar-nav a { position: relative; }
+.hist-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hist-item { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+.hist-item .file-icon:not(.pdf):not(.video):not(.audio) { background: var(--accent); }
+.hist-main { display: grid; gap: 2px; flex: 1; min-width: 160px; }
+.hist-main strong { font-size: 14px; overflow-wrap: anywhere; }
+.hist-path { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* Vocabulary and Others cards */
+.skill-card.sky { background: color-mix(in srgb, #0ea5e9 14%, var(--surface)); } .skill-card.sky .skill-icon { background: #0ea5e9; }
+.skill-card.rose { background: color-mix(in srgb, #ec4899 13%, var(--surface)); } .skill-card.rose .skill-icon { background: #ec4899; }

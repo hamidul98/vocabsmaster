@@ -12,6 +12,7 @@ import AdminPage from "./pages/AdminPage";
 import AdminSkillPage from "./pages/AdminSkillPage";
 import AdminTopicPage from "./pages/AdminTopicPage";
 import DriveFolderPage from "./pages/DriveFolderPage";
+import AdminHistoryPage from "./pages/AdminHistoryPage";
 import NotFound from "./pages/NotFound";
 import CoverTemplatesPage from "./pages/CoverTemplatesPage";
 import { AuthGate } from "./pages/SignInPage";
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="difficult/:mode?" element={<DifficultPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="admin/history" element={<AdminHistoryPage />} />
         <Route path="admin/:skill" element={<AdminSkillPage />} />
         <Route path="admin/:skill/d/:folderId" element={<DriveFolderPage />} />
         <Route path="admin/:skill/:rid" element={<AdminTopicPage />} />

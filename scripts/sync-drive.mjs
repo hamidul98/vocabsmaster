@@ -1,9 +1,11 @@
-// Saves a copy of every linked Google Drive folder's contents to src/lib/driveSnapshot.json.
-// Needs no API key (reads the public "embedded folder" view). Run it again whenever files are added: npm run sync:drive
+// Saves a copy of every linked Google Drive folder's contents to src/lib/driveSnapshot.json and records what was
+// added or removed since the last run in src/lib/driveHistory.json (shown in Admin Features > What's new).
+// Needs no API key (reads the public "embedded folder" view). Run it any time: npm run sync:drive
 import { readFile, writeFile } from 'node:fs/promises';
 
 const sourcesUrl = new URL('../src/lib/driveSources.json', import.meta.url);
 const snapshotUrl = new URL('../src/lib/driveSnapshot.json', import.meta.url);
+const historyUrl = new URL('../src/lib/driveHistory.json', import.meta.url);
 const sources = JSON.parse(await readFile(sourcesUrl, 'utf8'));
 
 // Folders whose NEW sub-folders are placed automatically (by name) into the right Admin Features card.
@@ -13,6 +15,8 @@ const skillFor = (name) => /vocab|word/i.test(name) ? 'vocabulary' : /listen/i.t
   : /speak|spoken|cue ?card/i.test(name) ? 'speaking' : /writ|essay|task ?[12]/i.test(name) ? 'writing' : /basic|pre-?ielts|grammar/i.test(name) ? 'pre-ielts' : 'others';
 const HIDDEN = /^students['’]?\s/i; // other people's recordings and homework
 const decode = (s) => s.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const MAX_ENTRIES = 100; // history keeps the latest 100 syncs that found changes
+const MAX_LISTED = 200; // per sync, how many added items are listed by name
 
 async function list(id, attempt = 1) {
   try {
@@ -69,12 +73,57 @@ while (queue.length) {
 }
 
 const files = Object.values(folders).reduce((n, l) => n + l.filter((x) => x.t !== 'folder').length, 0);
-// only rewrite the file when something really changed, so scheduled runs do not create empty commits
 let before = null;
 try { before = JSON.parse(await readFile(snapshotUrl, 'utf8')); } catch { /* first run */ }
+// only rewrite files when something really changed, so scheduled runs do not create empty commits
 if (before && JSON.stringify(before.folders) === JSON.stringify(folders)) {
   console.log(`No changes (${Object.keys(folders).length} folders, ${files} files).`);
   process.exit(0);
 }
+
+// ---- what changed? (skipped on the very first run: there is nothing to compare with) ----
+const flat = (f) => new Map(Object.entries(f).flatMap(([parent, items]) => items.map((it) => [it.i, { ...it, parent }])));
+if (before && Object.keys(before.folders).length) {
+  const oldAll = flat(before.folders);
+  const newAll = flat(folders);
+
+  // where every item sits: path of folders from its linked source, and the card (skill) it belongs to
+  // sources on specific cards win over the catch-all "Others" ones (e.g. "Everything")
+  const place = new Map(); // folder id -> { skill, path: [{ id, name }] }
+  const ordered = [...sources].sort((a, b) => (a.skill === 'others') - (b.skill === 'others'));
+  for (const s of ordered) {
+    const stack = [[s.id, { skill: s.skill, path: [{ id: s.id, name: s.name }] }]];
+    while (stack.length) {
+      const [fid, info] = stack.pop();
+      if (place.has(fid)) continue;
+      place.set(fid, info);
+      for (const it of folders[fid] ?? []) if (it.t === 'folder') stack.push([it.i, { skill: info.skill, path: [...info.path, { id: it.i, name: it.n }] }]);
+    }
+  }
+
+  const addedItems = [...newAll.values()].filter((it) => !oldAll.has(it.i));
+  const removed = [...oldAll.keys()].filter((k) => !newAll.has(k)).length;
+  if (addedItems.length || removed) {
+    // a folder that is new as a whole is listed once, not file by file
+    const newFolderIds = new Set(addedItems.filter((it) => it.t === 'folder').map((it) => it.i));
+    const top = addedItems.filter((it) => !newFolderIds.has(it.parent));
+    const entry = {
+      at: Date.now(),
+      files: addedItems.filter((it) => it.t !== 'folder').length,
+      removed,
+      added: top.slice(0, MAX_LISTED).map((it) => {
+        const p = place.get(it.parent);
+        return { id: it.i, name: it.n, type: it.t, skill: p?.skill ?? 'others', path: p?.path ?? [], in: it.parent };
+      }),
+      more: Math.max(0, top.length - MAX_LISTED),
+    };
+    let history = { since: before.at, entries: [] };
+    try { history = JSON.parse(await readFile(historyUrl, 'utf8')); } catch { /* first run */ }
+    history.entries = [entry, ...history.entries].slice(0, MAX_ENTRIES);
+    await writeFile(historyUrl, JSON.stringify(history));
+    console.log(`  history: ${entry.files} new files, ${removed} removed.`);
+  }
+}
+
 await writeFile(snapshotUrl, JSON.stringify({ at: Date.now(), folders }));
 console.log(`Saved ${Object.keys(folders).length} folders and ${files} files.`);

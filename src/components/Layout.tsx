@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { useAuth } from '@/lib/sync';
+import { useNewDriveCount } from '@/lib/driveHistory';
 import { Button, Toast, toast } from '@heroui/react';
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
@@ -54,6 +55,7 @@ export default function Layout() {
 
   const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
   const { user, signOut, isAdmin } = useAuth();
+  const newDrive = useNewDriveCount(isAdmin);
   const initials = name.trim().split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || 'L';
   const Brand = <Link to="/" className="brand"><img className="brand-mark" src="brand-icon.svg" alt="" width={32} height={32}/><span className="brand-text"><strong>Vocabs Master</strong><small>IELTS Book Vocab</small></span>{isAdmin && <span className="admin-badge">Admin</span>}</Link>;
   const Stats = <div className="top-stats">
@@ -80,7 +82,7 @@ export default function Layout() {
         <Button isIconOnly size="sm" variant="ghost" className="theme-opt" aria-label="Light theme" aria-pressed={theme === 'light'} onPress={() => setTheme('light')}><Icon name="sun" size={20} filled={theme === 'light'}/></Button>
         <Button isIconOnly size="sm" variant="ghost" className="theme-opt" aria-label="Dark theme" aria-pressed={theme === 'dark'} onPress={() => setTheme('dark')}><Icon name="moon" size={20} filled={theme === 'dark'}/></Button>
       </div>
-      <nav aria-label="Main navigation" className="sidebar-nav">{[...links, ...(isAdmin ? [{ to: '/admin', name: 'Admin Features', icon: 'admin_panel_settings' }] : [])].map((l) => <NavLink key={l.to} to={l.to} end={l.to === '/'} title={l.name} aria-label={l.name}><Icon name={l.icon} size={22}/><span className="nav-label">{l.name}</span></NavLink>)}</nav>
+      <nav aria-label="Main navigation" className="sidebar-nav">{[...links, ...(isAdmin ? [{ to: '/admin', name: 'Admin Features', icon: 'admin_panel_settings' }] : [])].map((l) => <NavLink key={l.to} to={l.to} end={l.to === '/'} title={l.name} aria-label={l.name}><Icon name={l.icon} size={22}/><span className="nav-label">{l.name}</span>{l.to === '/admin' && newDrive > 0 && <span className="nav-dot" role="status" aria-label={`${newDrive} new files in Drive`}/>}</NavLink>)}</nav>
       <div className="sidebar-foot">
         <button type="button" className="rail-btn" title={standalone ? 'Installed — works offline' : pwa.canInstall ? 'Install the app' : pwa.showIosHint ? 'Install: tap Share, then Add to Home Screen' : 'Install: use your browser menu, then Install app'}
           aria-label={standalone ? 'App installed, works offline' : 'Install the app'} onClick={() => (pwa.canInstall ? void pwa.install() : navigate('/settings'))}><Icon name={standalone ? 'offline' : 'phone'} size={22}/></button>

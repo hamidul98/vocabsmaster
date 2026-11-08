@@ -4,6 +4,7 @@ import { useProgress, type ResourceItem, type Skill } from '@/lib/progress';
 import { useAuth } from '@/lib/sync';
 import { load, save } from '@/lib/storage';
 import { DRIVE_SOURCES } from '@/lib/driveSources';
+import { useNewDriveCount } from '@/lib/driveHistory';
 import { Icon, Loading } from '@/components/ui';
 
 export const SKILLS: { id: Skill; name: string; icon: string; tone: string; hint: string }[] = [
@@ -59,11 +60,13 @@ export default function AdminPage() {
   const { loading, isAdmin } = useAuth();
   const { resources } = useProgress();
   useStarterResources(isAdmin);
+  const fresh = useNewDriveCount(isAdmin);
   if (loading) return <Loading/>;
   if (!isAdmin) return <Navigate to="/" replace/>;
 
   return <div className="admin-page">
     <div className="page-title"><h1>Admin Features <span className="admin-badge">Admin</span></h1><p>Only you can see this. Open a skill to add your resources.</p></div>
+    <Link to="/admin/history" className="hist-link"><Icon name="history" size={22}/><span><strong>What’s new in Drive</strong><small>See every file and folder that was added, with the date</small></span>{fresh > 0 && <span className="new-pill">{fresh} new</span>}<Icon name="arrow" size={18}/></Link>
     <div className="skill-grid">{SKILLS.map((s) => {
       const n = resources[s.id]?.length ?? 0;
       return <Link key={s.id} to={`/admin/${s.id}`} className={`skill-card ${s.tone}`}>
