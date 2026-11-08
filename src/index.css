@@ -1615,3 +1615,15 @@ button.avatar[data-focus-visible] { outline: 2px solid var(--focus); outline-off
 .account-menu-item.danger { color: #dc2626; }
 .account-menu-item.danger[data-focused], .account-menu-item.danger[data-hovered] { background: var(--t-coral); }
 .dark .account-menu-item.danger { color: #f87171; }
+
+/* ===== Drag to reorder ===== */
+.order-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -10px 0 14px; font-size: 13px; }
+.order-bar .muted { display: inline-flex; align-items: center; gap: 6px; }
+.order-bar .auth-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.drag-handle { display: grid; place-items: center; width: 28px; height: 36px; margin-left: 4px; border: 0; background: transparent; color: var(--muted); border-radius: 8px; cursor: grab; touch-action: none; flex-shrink: 0; }
+.drag-handle:hover { color: var(--foreground); background: var(--soft); }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.word-list.sortable .row-main { padding-left: 2px; }
+.word-row.dragging { position: relative; z-index: 5; box-shadow: 0 14px 34px rgba(15, 27, 61, .18); opacity: .96; }
+@media (max-width: 700px) { .drag-handle { height: 40px; } }

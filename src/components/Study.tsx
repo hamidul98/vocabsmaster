@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Label, Switch, Tabs } from '@heroui/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -11,6 +11,7 @@ import { speak } from '@/lib/speech';
 import { useProgress, XP } from '@/lib/progress';
 import WordCard, { WordDetails, WordRow } from './WordCard';
 import { MARK_COLORS, type MarkColor } from '@/lib/colors';
+import { SortableWordList } from './SortableWordList';
 import type { CSSProperties } from 'react';
 import { Empty, Icon, Meter, SearchInput } from './ui';
 import { Mascot, Ring } from './art';
@@ -18,7 +19,8 @@ import { Mascot, Ring } from './art';
 export function PreferenceSwitch({ label, selected, onChange }: { label: string; selected: boolean; onChange: (v:boolean)=>void }) {
   return <Switch isSelected={selected} onChange={onChange} className="preference-switch"><Switch.Content><Switch.Control><Switch.Thumb/></Switch.Control><Label className="switch-label">{label}</Label></Switch.Content></Switch>;
 }
-export function Study({ words, mode, base }: { words:Word[]; mode:string; base:string }) {
+/** `orderKey` enables drag-to-reorder in list view and saves the order under that key (e.g. the passage slug). */
+export function Study({ words: sheetWords, mode, base, orderKey }: { words:Word[]; mode:string; base:string; orderKey?: string }) {
   const navigate=useNavigate();
   const { search }=useLocation(); // keep ?filters when switching tabs (Practice)
   const [query,setQuery]=useState('');
@@ -26,13 +28,21 @@ export function Study({ words, mode, base }: { words:Word[]; mode:string; base:s
   const [page,setPage]=useState(1);
   const [view,setView]=useState<'cards'|'list'>(()=>load('wordView','cards'));
   const [colorFilter,setColorFilter]=useState<MarkColor|'any'|null>(null);
-  const { colors } = useProgress();
+  const { colors, order, setOrder } = useProgress();
+  const saved = orderKey ? order[orderKey] : undefined;
+  // Saved order first; words not in the saved list (e.g. newly added to the sheet) keep their sheet position after them.
+  const words = useMemo(() => {
+    if (!saved?.length) return sheetWords;
+    const pos = new Map(saved.map((id, i) => [id, i]));
+    return sheetWords.map((w, i) => ({ w, k: pos.get(w.id) ?? saved.length + i })).sort((a, b) => a.k - b.k).map((x) => x.w);
+  }, [sheetWords, saved]);
   const active=['list','flashcards','quiz'].includes(mode)?mode:'list';
   const filtered=words.filter(w=>[w.word,...w.fields.map(f=>f.value)].join(' ').toLocaleLowerCase().includes(query.toLocaleLowerCase()))
     .filter(w=>colorFilter===null||(colorFilter==='any'?!!colors[w.id]:colors[w.id]===colorFilter));
   const colorCount=(c:MarkColor)=>words.filter(w=>colors[w.id]===c).length;
   const markedCount=words.filter(w=>colors[w.id]).length;
   const shown=filtered.slice(0,page*24);
+  const canDrag=view==='list'&&!!orderKey&&!query&&colorFilter===null;
   return <Tabs selectedKey={active} onSelectionChange={key=>navigate(`${base}/${key}${search}`)} className="study-tabs">
     <div className="study-toolbar"><Tabs.ListContainer><Tabs.List aria-label="Study mode">{['list','flashcards','quiz'].map(m=><Tabs.Tab key={m} id={m}>{m==='list'?'List':m==='flashcards'?'Flashcards':'Quiz'}<Tabs.Indicator/></Tabs.Tab>)}</Tabs.List></Tabs.ListContainer><span className="muted">{words.length} words</span></div>
     <Tabs.Panel id="list">
@@ -48,10 +58,16 @@ export function Study({ words, mode, base }: { words:Word[]; mode:string; base:s
         <button type="button" className={`cf-chip ${colorFilter==='any'?'active':''}`} aria-pressed={colorFilter==='any'} onClick={()=>{setColorFilter('any');setPage(1);}}>Any colour <span className="cf-count">{markedCount}</span></button>
         {MARK_COLORS.map(c=><button key={c.key} type="button" className={`cf-chip ${colorFilter===c.key?'active':''}`} style={{'--mark':c.hex} as CSSProperties} aria-pressed={colorFilter===c.key} aria-label={`${c.label} (${colorCount(c.key)})`} onClick={()=>{setColorFilter(colorFilter===c.key?null:c.key);setPage(1);}}><span className="color-dot"/><span className="cf-count">{colorCount(c.key)}</span></button>)}
       </div>
+      {view==='list'&&orderKey&&<div className="order-bar">
+        <span className="muted"><Icon name="drag_indicator" size={18}/>{canDrag?'Drag the handle to put words in your own order.':'Clear the search and colour filter to reorder words.'}</span>
+        {saved&&<button type="button" className="auth-link" onClick={()=>setOrder(orderKey,null)}><Icon name="restart_alt" size={18}/>Reset to sheet order</button>}
+      </div>}
       {filtered.length?<>
         {view==='cards'
           ?<div className="word-grid">{shown.map(w=><WordCard key={w.id} word={w} hideMeanings={hide}/>)}</div>
-          :<ul className="word-list">{shown.map((w,i)=><WordRow key={w.id} word={w} hideMeanings={hide} index={i}/>)}</ul>}
+          :canDrag
+            ?<SortableWordList ordered={words} shown={shown} hideMeanings={hide} onReorder={ids=>setOrder(orderKey!, ids)}/>
+            :<ul className="word-list">{shown.map((w,i)=><WordRow key={w.id} word={w} hideMeanings={hide} index={i}/>)}</ul>}
         {filtered.length>page*24&&<div className="load-more"><Button variant="secondary" onPress={()=>setPage(p=>p+1)}>Show more words ({filtered.length-page*24} left)</Button></div>}
       </>:<Empty title="No words found">{colorFilter!==null?'No words have this focus colour yet. Tap the palette icon on a word to add one.':'Try a different spelling or search term.'}</Empty>}
     </Tabs.Panel>

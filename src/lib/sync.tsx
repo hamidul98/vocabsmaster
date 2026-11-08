@@ -44,7 +44,7 @@ export function authMessage(e: unknown): string {
   }
 }
 
-const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {} };
+const EMPTY: SyncData = { marks: {}, learnedAt: {}, daily: {}, xp: 0, goal: 20, name: 'Learner', book: '', wrong: {}, bonus: [], last: null, colors: {}, order: {} };
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -61,7 +61,7 @@ const maxMerge = (a: Record<string, number>, b: Record<string, number>) => {
   return out;
 };
 
-const isEmpty = (d: SyncData) => !Object.keys(d.marks).length && !Object.keys(d.colors).length && !d.xp && !Object.keys(d.daily).length;
+const isEmpty = (d: SyncData) => !Object.keys(d.marks).length && !Object.keys(d.colors).length && !Object.keys(d.order ?? {}).length && !d.xp && !Object.keys(d.daily).length;
 
 /**
  * First sign-in on a device: combine this device's data with the cloud copy so nothing is lost.
@@ -84,6 +84,7 @@ function merge(local: SyncData, remote: Partial<SyncData>): SyncData {
     bonus: [...new Set([...(remote.bonus ?? []), ...local.bonus])],
     last: local.last ?? remote.last ?? null,
     colors: { ...(remote.colors ?? {}), ...local.colors },
+    order: { ...(remote.order ?? {}), ...local.order },
   };
 }
 

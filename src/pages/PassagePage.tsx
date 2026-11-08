@@ -33,6 +33,6 @@ export default function PassagePage() {
       </div>
       <Ring value={total ? learned / total : 0} size={64} stroke={7} label={`${learned} of ${total} learned`}><small className="ring-pct">{total ? Math.round((learned / total) * 100) : 0}%</small></Ring>
     </div>
-    <Study key={slug} words={passage.words} mode={mode} base={`/${slug}`} />
+    <Study key={slug} words={passage.words} mode={mode} base={`/${slug}`} orderKey={slug} />
   </>;
 }

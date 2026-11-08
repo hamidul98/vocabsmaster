@@ -8,11 +8,12 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
  * Without them the app works exactly as before (browser-only storage).
  */
 const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAFoOaWxCl6JXycx03lI6WFifmndsjabHc',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'vocabs-master.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'vocabs-master',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:342888219988:web:ff6959772b213b1f86b4c1',
 };
+// Built-in fallbacks keep sign-in required even if the env vars are missing on a deploy.
 
 export const firebaseEnabled = Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
 

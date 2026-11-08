@@ -61,7 +61,15 @@ export default function WordCard({ word, hideMeanings=false, source }: { word: W
 }
 
 /** Compact one-line list row; click the row to expand full details. */
-export function WordRow({ word, hideMeanings=false, index }: { word: Word; hideMeanings?: boolean; index?: number }) {
+export interface RowDrag {
+  ref: (el: HTMLElement | null) => void;
+  style?: CSSProperties;
+  /** The ⠿ handle (receives the drag listeners). */
+  handle: React.ReactNode;
+  dragging?: boolean;
+}
+
+export function WordRow({ word, hideMeanings=false, index, drag }: { word: Word; hideMeanings?: boolean; index?: number; drag?: RowDrag }) {
   const [open,setOpen]=useState(false);
   const [revealed,setRevealed]=useState(false);
   const { colors } = useProgress();
@@ -69,8 +77,9 @@ export function WordRow({ word, hideMeanings=false, index }: { word: Word; hideM
   const pos = word.fields.find(f=>f.kind==='pos' && f.value)?.value;
   const bangla = word.fields.find(f=>f.kind==='bangla' && f.value)?.value ?? word.fields.find(f=>f.kind==='meaning' && f.value)?.value;
   const hidden = hideMeanings && !revealed;
-  return <li className={`word-row ${hex ? 'has-mark' : ''} ${open ? 'open' : ''}`} style={markStyle(hex)}>
+  return <li ref={drag?.ref} className={`word-row ${hex ? 'has-mark' : ''} ${open ? 'open' : ''} ${drag?.dragging ? 'dragging' : ''}`} style={{ ...markStyle(hex), ...drag?.style }}>
     <div className="row-main">
+      {drag?.handle}
       <button type="button" className="row-toggle" aria-expanded={open} onClick={()=>{setOpen(o=>!o); setRevealed(true);}}>
         {index!==undefined && <span className="row-num">{index+1}</span>}
         <span className="row-word">{word.word}</span>
