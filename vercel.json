@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/mcp.ts": {
+      "includeFiles": "src/lib/drive*.json",
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/mcp/:key", "destination": "/api/mcp?key=:key" }
+  ]
+}
