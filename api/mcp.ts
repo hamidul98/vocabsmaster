@@ -343,7 +343,10 @@ function authorized(req: Request): boolean {
 
 async function handle(req: Request): Promise<Response> {
   if (!process.env.MCP_SECRET) return Response.json({ error: 'MCP is not set up: add MCP_SECRET in the Vercel environment variables.' }, { status: 503 });
-  if (!authorized(req)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  // A wrong key gets 404, never 401: a 401 makes MCP clients (Claude, ChatGPT) start an OAuth sign-in this server doesn't have.
+  if (!authorized(req)) return new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain' } });
+  // Stateless server: no event stream on GET and no sessions to DELETE. Answer at once instead of holding the request open.
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { allow: 'POST', 'content-type': 'text/plain' } });
   const server = buildServer();
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
